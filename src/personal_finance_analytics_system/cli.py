@@ -125,6 +125,12 @@ def show_budget_status(expenses: float) -> None:
         print("Budget status: healthy")
 
 
+
+
+
+
+
+
 def show_transactions() -> None:
     """Show transactions"""
     if not manager.transactions:
