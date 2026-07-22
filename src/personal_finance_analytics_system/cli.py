@@ -4,69 +4,173 @@ from personal_finance_analytics_system.transaction_manager import (
 )
 
 
+manager = TransactionManager()
+monthly_budget = 0.0
+
+
 def show_menu() -> None:
     """Show menu"""
     print("\nPersonal Finance System")
     print("1 Add income")
     print("2 Add expense")
-    print("3 View summary")
-    print("4 Exit")
+    print("3 Set monthly budget")
+    print("4 View financial summary")
+    print("5 View transactions")
+    print("6 Exit")
 
 
-def add_transaction(
-    manager: TransactionManager,
-    transaction_type: str,
-) -> None:
+def get_amount(message: str) -> float:
+    """Get valid amount"""
+    while True:
+        try:
+            amount = float(input(message).strip())
+
+            if amount <= 0:
+                print("Amount must be greater than zero")
+                continue
+
+            return amount
+
+        except ValueError:
+            print("Enter a valid number")
+
+
+def add_transaction(transaction_type: str) -> None:
     """Add transaction"""
-    try:
-        # get input
-        amount = float(input("Enter amount "))
-        category = input("Enter category ")
-        description = input("Enter description ")
+    amount = get_amount("Enter amount: ")
+    category = input("Enter category: ").strip()
 
-        # create transaction
-        transaction = Transaction(
-            amount,
-            transaction_type,
-            category,
-            description,
-        )
+    while not category:
+        print("Category cannot be empty")
+        category = input("Enter category: ").strip()
 
-        manager.add_transaction(transaction)
+    description = input(
+        "Enter description or press Enter to skip: "
+    ).strip()
 
-        print("Transaction added successfully")
+    transaction = Transaction(
+        amount,
+        transaction_type,
+        category,
+        description,
+    )
 
-    except ValueError as error:
-        print(f"Error {error}")
+    manager.add_transaction(transaction)
+
+    print(f"{transaction_type.title()} added successfully")
 
 
-def show_summary(manager: TransactionManager) -> None:
-    """Show summary"""
+def set_budget() -> None:
+    """Set monthly budget"""
+    global monthly_budget
+
+    monthly_budget = get_amount("Enter monthly expense budget: ")
+
+    print(f"Monthly budget set to {monthly_budget:.2f}")
+
+
+def show_summary() -> None:
+    """Show financial summary"""
+    income = manager.get_total_income()
+    expenses = manager.get_total_expenses()
+    balance = manager.get_balance()
+
     print("\nFinancial Summary")
-    print(f"Total income {manager.get_total_income()}")
-    print(f"Total expenses {manager.get_total_expenses()}")
-    print(f"Balance {manager.get_balance()}")
+    print(f"Total income: {income:.2f}")
+    print(f"Total expenses: {expenses:.2f}")
+    print(f"Current balance: {balance:.2f}")
+
+    if income > 0:
+        savings_rate = balance / income * 100
+        print(f"Savings rate: {savings_rate:.1f}%")
+    else:
+        print("Savings rate: unavailable")
+
+    if balance < 0:
+        print("Status: expenses are greater than income")
+    elif balance == 0:
+        print("Status: no money remaining")
+    else:
+        print("Status: positive balance")
+
+    show_budget_status(expenses)
+
+
+def show_budget_status(expenses: float) -> None:
+    """Show budget status"""
+    if monthly_budget == 0:
+        print("Monthly budget: not set")
+        return
+
+    budget_remaining = monthly_budget - expenses
+    budget_used = expenses / monthly_budget * 100
+
+    print(f"Monthly budget: {monthly_budget:.2f}")
+    print(f"Budget used: {budget_used:.1f}%")
+
+    if budget_remaining < 0:
+        print(
+            f"Budget exceeded by: {abs(budget_remaining):.2f}"
+        )
+    else:
+        print(f"Budget remaining: {budget_remaining:.2f}")
+
+    if budget_used >= 100:
+        print("Budget status: exceeded")
+    elif budget_used >= 80:
+        print("Budget status: warning")
+    else:
+        print("Budget status: healthy")
+
+
+def show_transactions() -> None:
+    """Show transactions"""
+    if not manager.transactions:
+        print("\nNo transactions found")
+        return
+
+    print("\nTransactions")
+
+    for number, transaction in enumerate(
+        manager.transactions,
+        start=1,
+    ):
+        description = transaction.description or "No description"
+
+        print(
+            f"{number} "
+            f"{transaction.transaction_type.title()} "
+            f"{transaction.category} "
+            f"{transaction.amount:.2f} "
+            f"{description}"
+        )
 
 
 def run_cli() -> None:
     """Run cli"""
-    manager = TransactionManager()
     while True:
         show_menu()
-
-        # get choice
-        choice = input("Choose an option ")
+        choice = input("Choose an option: ").strip()
 
         if choice == "1":
-            add_transaction(manager, "income")
+            add_transaction("income")
+
         elif choice == "2":
-            add_transaction(manager, "expense")
+            add_transaction("expense")
 
         elif choice == "3":
-            show_summary(manager)
+            set_budget()
+
         elif choice == "4":
+            show_summary()
+
+        elif choice == "5":
+            show_transactions()
+
+        elif choice == "6":
             print("Goodbye")
             break
+
         else:
             print("Invalid option")
 
