@@ -26,10 +26,4 @@ class Transaction:
         if self.transaction_type == "income":
             return self.amount
 
-<<<<<<< Updated upstream
         return -self.amount
-=======
-        return -self.amount
-     
-
->>>>>>> Stashed changes
