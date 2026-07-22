@@ -1,14 +1,30 @@
-from personal_finance_analytics_system.json_storage import JsonStorage
+from personal_finance_analytics_system.storage_selection import (
+    create_storage,
+)
 from personal_finance_analytics_system.transaction import Transaction
 from personal_finance_analytics_system.transaction_manager import (
     TransactionManager,
 )
 
-storage = JsonStorage()
+storage = None
 manager = TransactionManager()
-manager.transactions = storage.load_transactions()
 monthly_budget = 0.0
 
+
+def choose_storage():
+    """Ask the user to choose storage"""
+    while True:
+        print("\nChoose storage")
+        print("1 JSON")
+        print("2 CSV")
+        print("3 SQLite")
+
+        choice = input("Choose an option: ").strip()
+
+        try:
+            return create_storage(choice)
+        except ValueError:
+            print("Invalid option")
 
 def show_menu() -> None:
     """Show menu"""
@@ -156,6 +172,13 @@ def show_transactions() -> None:
 
 def run_cli() -> None:
     """Run cli"""
+    global storage
+    global manager
+
+    storage = choose_storage()
+    manager = TransactionManager()
+    manager.transactions = storage.load_transactions()
+
     while True:
         show_menu()
         choice = input("Choose an option: ").strip()
@@ -181,6 +204,5 @@ def run_cli() -> None:
 
         else:
             print("Invalid option")
-
 
 run_cli()
