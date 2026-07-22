@@ -1,10 +1,12 @@
+from personal_finance_analytics_system.json_storage import JsonStorage
 from personal_finance_analytics_system.transaction import Transaction
 from personal_finance_analytics_system.transaction_manager import (
     TransactionManager,
 )
 
-
+storage = JsonStorage()
 manager = TransactionManager()
+manager.transactions = storage.load_transactions()
 monthly_budget = 0.0
 
 
@@ -56,7 +58,7 @@ def add_transaction(transaction_type: str) -> None:
     )
 
     manager.add_transaction(transaction)
-
+    storage.save_transactions(manager.transactions)
     print(f"{transaction_type.title()} added successfully")
 
 
