@@ -16,12 +16,15 @@ from personal_finance_analytics_system.transaction import Transaction
 from personal_finance_analytics_system.transaction_manager import (
     TransactionManager,
 )
-
+from personal_finance_analytics_system.report_manager import (
+    ReportManager,
+)
 
 storage = None
 manager = TransactionManager()
 budget_manager = BudgetManager()
 budget_storage = BudgetStorage()
+report_manager = ReportManager()
 monthly_budget = 0.0
 
 
@@ -51,7 +54,9 @@ def show_menu() -> None:
     print("6 View transactions")
     print("7 View category budgets")
     print("8 Filter transactions")
-    print("9 Exit")
+    print("9 View monthly report")
+    print("10 Exit")
+
 
 def get_amount(message: str) -> float:
     """Get valid amount"""
@@ -185,7 +190,56 @@ def show_budget_status(expenses: float) -> None:
         print("Budget status: healthy")
 
 
+def show_monthly_report() -> None:
+    """Show a monthly financial report"""
+    month = input(
+        "Enter month YYYY-MM: "
+    ).strip()
 
+    try:
+        income = report_manager.get_monthly_income(
+            manager.transactions,
+            month,
+        )
+
+        expenses = report_manager.get_monthly_expenses(
+            manager.transactions,
+            month,
+        )
+
+        balance = report_manager.get_monthly_balance(
+            manager.transactions,
+            month,
+        )
+
+        savings_rate = report_manager.get_savings_rate(
+            manager.transactions,
+            month,
+        )
+
+        spending = report_manager.get_spending_by_category(
+            manager.transactions,
+            month,
+        )
+
+    except ValueError as error:
+        print(error)
+        return
+
+    print(f"\nMonthly Report {month}")
+    print(f"Income: {income:.2f}")
+    print(f"Expenses: {expenses:.2f}")
+    print(f"Balance: {balance:.2f}")
+    print(f"Savings rate: {savings_rate:.1f}%")
+
+    print("\nSpending by category")
+
+    if not spending:
+        print("No expense transactions found")
+        return
+
+    for category, amount in spending.items():
+        print(f"{category}: {amount:.2f}")
 
 
 
@@ -436,6 +490,9 @@ def run_cli() -> None:
             filter_transactions()
 
         elif choice == "9":
+            show_monthly_report()
+
+        elif choice == "10":
             print("Goodbye")
             break
 
