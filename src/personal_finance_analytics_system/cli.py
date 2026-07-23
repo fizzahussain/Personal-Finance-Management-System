@@ -594,4 +594,5 @@ def run_cli() -> None:
         else:
             print("Invalid option")
 
-run_cli()
+if __name__ == "__main__":
+    run_cli()
