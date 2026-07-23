@@ -1,0 +1,26 @@
+[
+    {
+        "amount": 3000.0,
+        "transaction_type": "income",
+        "category": "salary",
+        "description": ""
+    },
+    {
+        "amount": 20.0,
+        "transaction_type": "expense",
+        "category": "tax",
+        "description": ""
+    },
+    {
+        "amount": 400.0,
+        "transaction_type": "expense",
+        "category": "food",
+        "description": "monthly lunch"
+    },
+    {
+        "amount": 300.0,
+        "transaction_type": "expense",
+        "category": "shopping",
+        "description": "clothes"
+    }
+]
