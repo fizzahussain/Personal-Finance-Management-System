@@ -22,7 +22,9 @@ from personal_finance_analytics_system.report_manager import (
 from personal_finance_analytics_system.report_exporter import (
     ReportExporter,
 )
-
+from personal_finance_analytics_system.chart_manager import (
+    ChartManager,
+)
 
 storage = None
 manager = TransactionManager()
@@ -30,6 +32,7 @@ budget_manager = BudgetManager()
 budget_storage = BudgetStorage()
 report_manager = ReportManager()
 report_exporter = ReportExporter(report_manager)
+chart_manager = ChartManager(report_manager)
 monthly_budget = 0.0
 
 
@@ -61,7 +64,9 @@ def show_menu() -> None:
     print("8 Filter transactions")
     print("9 View monthly report")
     print("10 Export monthly report")
-    print("11 Exit")
+    print("11 Create category spending chart")
+    print("12 Create monthly summary chart")
+    print("13 Exit")
 
 
 def get_amount(message: str) -> float:
@@ -476,6 +481,48 @@ def export_monthly_report() -> None:
     )
 
 
+def create_category_chart() -> None:
+    """Create a category spending chart"""
+    month = input(
+        "Enter month YYYY-MM: "
+    ).strip()
+
+    try:
+        file_path = (
+            chart_manager.create_category_spending_chart(
+                manager.transactions,
+                month,
+            )
+        )
+    except ValueError as error:
+        print(error)
+        return
+
+    print(
+        f"Chart saved to {file_path}"
+    )
+
+
+def create_summary_chart() -> None:
+    """Create a monthly summary chart"""
+    month = input(
+        "Enter month YYYY-MM: "
+    ).strip()
+
+    try:
+        file_path = (
+            chart_manager.create_monthly_summary_chart(
+                manager.transactions,
+                month,
+            )
+        )
+    except ValueError as error:
+        print(error)
+        return
+
+    print(
+        f"Chart saved to {file_path}"
+    )
 
 
 def run_cli() -> None:
@@ -524,6 +571,12 @@ def run_cli() -> None:
             export_monthly_report()
 
         elif choice == "11":
+            create_category_chart()
+
+        elif choice == "12":
+            create_summary_chart()
+
+        elif choice == "13":
             print("Goodbye")
             break
 
