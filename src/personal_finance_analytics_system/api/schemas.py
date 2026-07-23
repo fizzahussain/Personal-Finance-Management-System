@@ -40,6 +40,7 @@ class TransactionCreate(BaseModel):
 class TransactionResponse(BaseModel):
     """Represent transaction output"""
 
+    transaction_id: int
     amount: float
     transaction_type: Literal["income", "expense"]
     category: str

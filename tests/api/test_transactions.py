@@ -44,7 +44,6 @@ def test_list_transactions_is_initially_empty(
     assert response.status_code == 200
     assert response.json() == []
 
-
 def test_create_transaction(
     client: TestClient,
 ) -> None:
@@ -62,6 +61,7 @@ def test_create_transaction(
 
     assert response.status_code == 201
     assert response.json() == {
+        "transaction_id": 1,
         "amount": 250.0,
         "transaction_type": "expense",
         "category": "Food",
@@ -90,6 +90,7 @@ def test_created_transaction_is_returned(
     assert response.status_code == 200
     assert response.json() == [
         {
+            "transaction_id": 1,
             "amount": 5000.0,
             "transaction_type": "income",
             "category": "Salary",
@@ -409,3 +410,137 @@ def test_rejects_invalid_filter_date(
 
     assert response.status_code == 422
 
+def test_get_transaction_by_id(
+    client: TestClient,
+) -> None:
+    """Return one transaction by ID"""
+    created_response = client.post(
+        "/transactions",
+        json={
+            "amount": 500,
+            "transaction_type": "expense",
+            "category": "Food",
+            "description": "Groceries",
+            "transaction_date": "2026-07-23",
+        },
+    )
+
+    transaction_id = created_response.json()[
+        "transaction_id"
+    ]
+
+    response = client.get(
+        f"/transactions/{transaction_id}"
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "transaction_id": transaction_id,
+        "amount": 500.0,
+        "transaction_type": "expense",
+        "category": "Food",
+        "description": "Groceries",
+        "transaction_date": "2026-07-23",
+    }
+
+
+def test_get_missing_transaction(
+    client: TestClient,
+) -> None:
+    """Return not found for a missing transaction"""
+    response = client.get("/transactions/999")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "Transaction not found",
+    }
+
+
+def test_delete_transaction(
+    client: TestClient,
+) -> None:
+    """Delete one transaction"""
+    created_response = client.post(
+        "/transactions",
+        json={
+            "amount": 500,
+            "transaction_type": "expense",
+            "category": "Food",
+            "description": "Groceries",
+            "transaction_date": "2026-07-23",
+        },
+    )
+
+    transaction_id = created_response.json()[
+        "transaction_id"
+    ]
+
+    response = client.delete(
+        f"/transactions/{transaction_id}"
+    )
+
+    assert response.status_code == 204
+    assert response.content == b""
+
+    get_response = client.get(
+        f"/transactions/{transaction_id}"
+    )
+
+    assert get_response.status_code == 404
+
+
+def test_delete_missing_transaction(
+    client: TestClient,
+) -> None:
+    """Return not found when deleting a missing transaction"""
+    response = client.delete("/transactions/999")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "Transaction not found",
+    }
+
+
+def test_deleted_transaction_is_removed_from_summary(
+    client: TestClient,
+) -> None:
+    """Remove a deleted transaction from the summary"""
+    income_response = client.post(
+        "/transactions",
+        json={
+            "amount": 5000,
+            "transaction_type": "income",
+            "category": "Salary",
+            "description": "",
+            "transaction_date": "2026-07-01",
+        },
+    )
+
+    client.post(
+        "/transactions",
+        json={
+            "amount": 500,
+            "transaction_type": "expense",
+            "category": "Food",
+            "description": "",
+            "transaction_date": "2026-07-02",
+        },
+    )
+
+    transaction_id = income_response.json()[
+        "transaction_id"
+    ]
+
+    client.delete(
+        f"/transactions/{transaction_id}"
+    )
+
+    response = client.get("/transactions/summary")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total_income": 0.0,
+        "total_expenses": 500.0,
+        "balance": -500.0,
+        "transaction_count": 1,
+    }

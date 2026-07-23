@@ -20,7 +20,9 @@ class Transaction:
         category: str,
         description: str = "",
         transaction_date: str | None = None,
+        transaction_id: int | None = None,
     ) -> None:
+        self.transaction_id = transaction_id
         self.amount = self.validate_amount(amount)
         self.transaction_type = self.validate_type(
             transaction_type

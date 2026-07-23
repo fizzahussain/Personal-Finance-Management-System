@@ -57,19 +57,31 @@ class TransactionService:
 
         return transactions
 
+    def get_transaction(
+        self,
+        transaction_id: int,
+    ) -> Transaction | None:
+        """Return one transaction by ID"""
+        return self.storage.get_transaction(transaction_id)
+
     def create_transaction(
         self,
         transaction: Transaction,
     ) -> Transaction:
         """Create and store a transaction"""
-        transactions = self.storage.load_transactions()
-        transactions.append(transaction)
+        return self.storage.insert_transaction(transaction)
 
-        self.storage.save_transactions(transactions)
-
-        return transaction
+    def delete_transaction(
+        self,
+        transaction_id: int,
+    ) -> bool:
+        """Delete one transaction by ID"""
+        return self.storage.delete_transaction(
+            transaction_id
+        )
 
     def get_summary(self) -> dict[str, float | int]:
+        """Return the transaction summary"""
         transactions = self.storage.load_transactions()
 
         total_income = sum(

@@ -6,6 +6,7 @@ from fastapi import (
     Depends,
     HTTPException,
     Query,
+    Response,
     status,
 )
 
@@ -38,7 +39,14 @@ def create_response(
     transaction: Transaction,
 ) -> TransactionResponse:
     """Convert a transaction into an API response"""
+    if transaction.transaction_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Transaction ID is unavailable",
+        )
+
     return TransactionResponse(
+        transaction_id=transaction.transaction_id,
         amount=transaction.amount,
         transaction_type=transaction.transaction_type,
         category=transaction.category,
@@ -118,7 +126,6 @@ def list_transactions(
     "/summary",
     response_model=TransactionSummaryResponse,
 )
-
 def get_transaction_summary(
     service: TransactionServiceDependency,
 ) -> TransactionSummaryResponse:
@@ -137,6 +144,35 @@ def get_transaction_summary(
         balance=float(summary["balance"]),
         transaction_count=int(summary["transaction_count"]),
     )
+
+
+@router.get(
+    "/{transaction_id}",
+    response_model=TransactionResponse,
+)
+def get_transaction(
+    transaction_id: int,
+    service: TransactionServiceDependency,
+) -> TransactionResponse:
+    """Return one transaction"""
+    try:
+        transaction = service.get_transaction(
+            transaction_id
+        )
+    except FinanceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        ) from error
+
+    if transaction is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found",
+        )
+
+    return create_response(transaction)
+
 
 @router.post(
     "",
@@ -169,3 +205,33 @@ def create_transaction(
         ) from error
 
     return create_response(created_transaction)
+
+
+@router.delete(
+    "/{transaction_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_transaction(
+    transaction_id: int,
+    service: TransactionServiceDependency,
+) -> Response:
+    """Delete one transaction"""
+    try:
+        deleted = service.delete_transaction(
+            transaction_id
+        )
+    except FinanceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        ) from error
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found",
+        )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT
+    )

@@ -216,3 +216,82 @@ def test_combine_transaction_filters(
 
     assert len(transactions) == 1
     assert transactions[0].category == "Food"
+
+
+def test_get_transaction_by_id(
+    tmp_path: Path,
+) -> None:
+    """Return one stored transaction by ID"""
+    storage = SqliteStorage(
+        str(tmp_path / "transactions.db")
+    )
+    service = TransactionService(storage)
+
+    created = service.create_transaction(
+        Transaction(
+            amount=500,
+            transaction_type="expense",
+            category="Food",
+            description="Groceries",
+            transaction_date="2026-07-23",
+        )
+    )
+
+    assert created.transaction_id is not None
+
+    transaction = service.get_transaction(
+        created.transaction_id
+    )
+
+    assert transaction is not None
+    assert (
+        transaction.transaction_id
+        == created.transaction_id
+    )
+    assert transaction.amount == 500
+
+
+def test_delete_transaction(
+    tmp_path: Path,
+) -> None:
+    """Delete one stored transaction"""
+    storage = SqliteStorage(
+        str(tmp_path / "transactions.db")
+    )
+    service = TransactionService(storage)
+
+    created = service.create_transaction(
+        Transaction(
+            amount=500,
+            transaction_type="expense",
+            category="Food",
+            description="Groceries",
+            transaction_date="2026-07-23",
+        )
+    )
+
+    assert created.transaction_id is not None
+
+    deleted = service.delete_transaction(
+        created.transaction_id
+    )
+
+    assert deleted is True
+    assert (
+        service.get_transaction(
+            created.transaction_id
+        )
+        is None
+    )
+
+
+def test_delete_missing_transaction(
+    tmp_path: Path,
+) -> None:
+    """Return false for a missing transaction"""
+    storage = SqliteStorage(
+        str(tmp_path / "transactions.db")
+    )
+    service = TransactionService(storage)
+
+    assert service.delete_transaction(999) is False
