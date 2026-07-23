@@ -1,6 +1,9 @@
 from personal_finance_analytics_system.budget_storage import (
     BudgetStorage,
 )
+from personal_finance_analytics_system.transaction_filter import (
+    TransactionFilter,
+)
 from datetime import date, datetime
 
 from personal_finance_analytics_system.budget_manager import (
@@ -47,8 +50,8 @@ def show_menu() -> None:
     print("5 View financial summary")
     print("6 View transactions")
     print("7 View category budgets")
-    print("8 Exit")
-
+    print("8 Filter transactions")
+    print("9 Exit")
 
 def get_amount(message: str) -> float:
     """Get valid amount"""
@@ -283,6 +286,115 @@ def show_category_budgets() -> None:
         elif remaining is not None:
             print(f"Remaining: {remaining:.2f}")
 
+def display_transactions(
+    transactions: list[Transaction],
+) -> None:
+    """Display a transaction list"""
+    if not transactions:
+        print("\nNo transactions found")
+        return
+
+    print("\nTransactions")
+
+    for number, transaction in enumerate(
+        transactions,
+        start=1,
+    ):
+        description = transaction.description or "No description"
+
+        print(
+            f"{number} "
+            f"{transaction.transaction_date} "
+            f"{transaction.transaction_type.title()} "
+            f"{transaction.category} "
+            f"{transaction.amount:.2f} "
+            f"{description}"
+        )
+
+def show_filter_menu() -> None:
+    """Show transaction filters"""
+    print("\nFilter Transactions")
+    print("1 Category")
+    print("2 Transaction type")
+    print("3 Date")
+    print("4 Amount range")
+    print("5 Back")
+
+
+def filter_transactions() -> None:
+    """Filter and display transactions"""
+    while True:
+        show_filter_menu()
+        choice = input("Choose an option: ").strip()
+
+        if choice == "1":
+            category = input("Enter category: ").strip()
+
+            filtered = TransactionFilter.by_category(
+                manager.transactions,
+                category,
+            )
+
+            display_transactions(filtered)
+
+        elif choice == "2":
+            transaction_type = input(
+                "Enter income or expense: "
+            ).strip()
+
+            filtered = TransactionFilter.by_type(
+                manager.transactions,
+                transaction_type,
+            )
+
+            display_transactions(filtered)
+
+        elif choice == "3":
+            transaction_date = input(
+                "Enter date YYYY-MM-DD: "
+            ).strip()
+
+            filtered = TransactionFilter.by_date(
+                manager.transactions,
+                transaction_date,
+            )
+
+            display_transactions(filtered)
+
+        elif choice == "4":
+            minimum_text = input(
+                "Enter minimum amount or press Enter: "
+            ).strip()
+
+            maximum_text = input(
+                "Enter maximum amount or press Enter: "
+            ).strip()
+
+            minimum_amount = (
+                float(minimum_text)
+                if minimum_text
+                else None
+            )
+
+            maximum_amount = (
+                float(maximum_text)
+                if maximum_text
+                else None
+            )
+
+            filtered = TransactionFilter.by_amount_range(
+                manager.transactions,
+                minimum_amount,
+                maximum_amount,
+            )
+
+            display_transactions(filtered)
+
+        elif choice == "5":
+            break
+
+        else:
+            print("Invalid option")
 
 def run_cli() -> None:
     """Run cli"""
@@ -321,6 +433,9 @@ def run_cli() -> None:
             show_category_budgets()
 
         elif choice == "8":
+            filter_transactions()
+
+        elif choice == "9":
             print("Goodbye")
             break
 
