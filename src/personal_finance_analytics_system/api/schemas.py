@@ -46,6 +46,7 @@ class TransactionResponse(BaseModel):
     description: str
     transaction_date: date
 
+
 class TransactionSummaryResponse(BaseModel):
     """Represent the transaction summary"""
 
@@ -53,6 +54,7 @@ class TransactionSummaryResponse(BaseModel):
     total_expenses: float
     balance: float
     transaction_count: int
+
 
 class CategoryBudgetUpdate(BaseModel):
     """Validate a category budget"""
@@ -65,6 +67,18 @@ class CategoryBudgetResponse(BaseModel):
 
     category: str
     amount: float
+
+
+class CategoryBudgetStatusResponse(BaseModel):
+    """Represent category budget status"""
+
+    category: str
+    budget: float
+    spending: float
+    remaining: float
+    percentage_used: float
+    status: str
+
 
 class MonthlyReportResponse(BaseModel):
     """Represent a monthly financial report"""

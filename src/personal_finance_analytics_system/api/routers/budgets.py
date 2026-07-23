@@ -7,6 +7,7 @@ from personal_finance_analytics_system.api.dependencies import (
 )
 from personal_finance_analytics_system.api.schemas import (
     CategoryBudgetResponse,
+    CategoryBudgetStatusResponse,
     CategoryBudgetUpdate,
 )
 from personal_finance_analytics_system.exceptions import FinanceError
@@ -49,6 +50,35 @@ def list_budgets(
         for category, amount in budgets.items()
     ]
 
+@router.get(
+    "/status",
+    response_model=list[CategoryBudgetStatusResponse],
+)
+def get_budget_statuses(
+    service: BudgetServiceDependency,
+) -> list[CategoryBudgetStatusResponse]:
+    """Return status details for all budgets"""
+    try:
+        budget_statuses = service.get_budget_statuses()
+    except FinanceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        ) from error
+
+    return [
+        CategoryBudgetStatusResponse(
+            category=str(item["category"]),
+            budget=float(item["budget"]),
+            spending=float(item["spending"]),
+            remaining=float(item["remaining"]),
+            percentage_used=float(
+                item["percentage_used"]
+            ),
+            status=str(item["status"]),
+        )
+        for item in budget_statuses
+    ]
 
 @router.put(
     "/categories/{category}",

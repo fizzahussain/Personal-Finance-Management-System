@@ -37,11 +37,14 @@ def get_budget_service() -> BudgetService:
     """Provide the budget service"""
     manager = BudgetManager()
     storage = BudgetStorage()
+    transaction_service = get_transaction_service()
 
     return BudgetService(
         manager=manager,
         storage=storage,
+        transaction_service=transaction_service,
     )
+
 
 def get_report_service() -> ReportService:
     """Provide the report service"""
