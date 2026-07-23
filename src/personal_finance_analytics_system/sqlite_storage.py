@@ -88,6 +88,163 @@ class SqliteStorage:
                 "Unable to update SQLite table"
             ) from error
 
+    def insert_transaction(
+        self,
+        transaction: Transaction,
+    ) -> Transaction:
+        """Insert one transaction"""
+        try:
+            with closing(
+                sqlite3.connect(self.file_path)
+            ) as connection:
+                cursor = connection.execute(
+                    """
+                    INSERT INTO transactions (
+                        amount,
+                        transaction_type,
+                        category,
+                        description,
+                        transaction_date
+                    )
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        transaction.amount,
+                        transaction.transaction_type,
+                        transaction.category,
+                        transaction.description,
+                        transaction.transaction_date,
+                    ),
+                )
+
+                connection.commit()
+
+                transaction.transaction_id = cursor.lastrowid
+
+        except sqlite3.Error as error:
+            raise StorageError(
+                "Unable to insert SQLite transaction"
+            ) from error
+
+        return transaction
+
+    def get_transaction(
+        self,
+        transaction_id: int,
+    ) -> Transaction | None:
+        """Return one transaction by ID"""
+        try:
+            with closing(
+                sqlite3.connect(self.file_path)
+            ) as connection:
+                row = connection.execute(
+                    """
+                    SELECT
+                        id,
+                        amount,
+                        transaction_type,
+                        category,
+                        description,
+                        transaction_date
+                    FROM transactions
+                    WHERE id = ?
+                    """,
+                    (transaction_id,),
+                ).fetchone()
+
+        except sqlite3.Error as error:
+            raise StorageError(
+                "Unable to load SQLite transaction"
+            ) from error
+
+        if row is None:
+            return None
+
+        try:
+            return Transaction(
+                transaction_id=int(row[0]),
+                amount=float(row[1]),
+                transaction_type=row[2],
+                category=row[3],
+                description=row[4],
+                transaction_date=row[5] or None,
+            )
+        except FinanceError as error:
+            raise StorageError(
+                "SQLite transaction data is invalid"
+            ) from error
+
+    def update_transaction(
+        self,
+        transaction_id: int,
+        transaction: Transaction,
+    ) -> Transaction | None:
+        """Update one transaction by ID"""
+        try:
+            with closing(
+                sqlite3.connect(self.file_path)
+            ) as connection:
+                cursor = connection.execute(
+                    """
+                    UPDATE transactions
+                    SET
+                        amount = ?,
+                        transaction_type = ?,
+                        category = ?,
+                        description = ?,
+                        transaction_date = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        transaction.amount,
+                        transaction.transaction_type,
+                        transaction.category,
+                        transaction.description,
+                        transaction.transaction_date,
+                        transaction_id,
+                    ),
+                )
+
+                connection.commit()
+
+        except sqlite3.Error as error:
+            raise StorageError(
+                "Unable to update SQLite transaction"
+            ) from error
+
+        if cursor.rowcount == 0:
+            return None
+
+        transaction.transaction_id = transaction_id
+
+        return transaction
+
+    def delete_transaction(
+        self,
+        transaction_id: int,
+    ) -> bool:
+        """Delete one transaction by ID"""
+        try:
+            with closing(
+                sqlite3.connect(self.file_path)
+            ) as connection:
+                cursor = connection.execute(
+                    """
+                    DELETE FROM transactions
+                    WHERE id = ?
+                    """,
+                    (transaction_id,),
+                )
+
+                connection.commit()
+
+                return cursor.rowcount > 0
+
+        except sqlite3.Error as error:
+            raise StorageError(
+                "Unable to delete SQLite transaction"
+            ) from error
+
     def save_transactions(
         self,
         transactions: list[Transaction],
@@ -102,25 +259,52 @@ class SqliteStorage:
                 )
 
                 for transaction in transactions:
-                    connection.execute(
-                        """
-                        INSERT INTO transactions (
-                            amount,
-                            transaction_type,
-                            category,
-                            description,
-                            transaction_date
+                    if transaction.transaction_id is None:
+                        cursor = connection.execute(
+                            """
+                            INSERT INTO transactions (
+                                amount,
+                                transaction_type,
+                                category,
+                                description,
+                                transaction_date
+                            )
+                            VALUES (?, ?, ?, ?, ?)
+                            """,
+                            (
+                                transaction.amount,
+                                transaction.transaction_type,
+                                transaction.category,
+                                transaction.description,
+                                transaction.transaction_date,
+                            ),
                         )
-                        VALUES (?, ?, ?, ?, ?)
-                        """,
-                        (
-                            transaction.amount,
-                            transaction.transaction_type,
-                            transaction.category,
-                            transaction.description,
-                            transaction.transaction_date,
-                        ),
-                    )
+
+                        transaction.transaction_id = (
+                            cursor.lastrowid
+                        )
+                    else:
+                        connection.execute(
+                            """
+                            INSERT INTO transactions (
+                                id,
+                                amount,
+                                transaction_type,
+                                category,
+                                description,
+                                transaction_date
+                            )
+                            VALUES (?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                transaction.transaction_id,
+                                transaction.amount,
+                                transaction.transaction_type,
+                                transaction.category,
+                                transaction.description,
+                                transaction.transaction_date,
+                            ),
+                        )
 
                 connection.commit()
 
@@ -138,6 +322,7 @@ class SqliteStorage:
                 rows = connection.execute(
                     """
                     SELECT
+                        id,
                         amount,
                         transaction_type,
                         category,
@@ -158,11 +343,12 @@ class SqliteStorage:
         try:
             for row in rows:
                 transaction = Transaction(
-                    amount=float(row[0]),
-                    transaction_type=row[1],
-                    category=row[2],
-                    description=row[3],
-                    transaction_date=row[4] or None,
+                    transaction_id=int(row[0]),
+                    amount=float(row[1]),
+                    transaction_type=row[2],
+                    category=row[3],
+                    description=row[4],
+                    transaction_date=row[5] or None,
                 )
 
                 transactions.append(transaction)
