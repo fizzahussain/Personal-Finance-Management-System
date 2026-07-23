@@ -51,6 +51,7 @@ reports/*.png
 reports/*.jpg
 reports/*.jpeg
 reports/*.pdf
+reports/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -61,4 +62,9 @@ Thumbs.db
 
 # Temporary files
 tempCodeRunnerFile.py
-*.tmp
+*.
+
+# Generated application data
+data/*.json
+data/*.csv
+data/*.db

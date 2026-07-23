@@ -10,7 +10,9 @@ from personal_finance_analytics_system.chart_manager import (
     ChartManager,
 )
 from personal_finance_analytics_system.exceptions import FinanceError
-from personal_finance_analytics_system.logger import configure_logging
+from personal_finance_analytics_system.logger import (
+    configure_logging,
+)
 from personal_finance_analytics_system.report_exporter import (
     ReportExporter,
 )
@@ -713,4 +715,6 @@ def run_cli() -> None:
             print("Invalid option")
 
 
-run_cli()
+if __name__ == "__main__":
+    run_cli()
+

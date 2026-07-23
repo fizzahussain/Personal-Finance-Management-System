@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from personal_finance_analytics_system.exceptions import (
@@ -22,19 +23,20 @@ class SqliteStorage:
                 parents=True,
                 exist_ok=True,
             )
-
-            self.create_table()
-            self.add_date_column()
-
         except OSError as error:
             raise StorageError(
                 "Unable to prepare SQLite storage"
             ) from error
 
+        self.create_table()
+        self.add_date_column()
+
     def create_table(self) -> None:
         """Create the transactions table"""
         try:
-            with sqlite3.connect(self.file_path) as connection:
+            with closing(
+                sqlite3.connect(self.file_path)
+            ) as connection:
                 connection.execute(
                     """
                     CREATE TABLE IF NOT EXISTS transactions (
@@ -58,7 +60,9 @@ class SqliteStorage:
     def add_date_column(self) -> None:
         """Add the date column to older databases"""
         try:
-            with sqlite3.connect(self.file_path) as connection:
+            with closing(
+                sqlite3.connect(self.file_path)
+            ) as connection:
                 columns = connection.execute(
                     "PRAGMA table_info(transactions)"
                 ).fetchall()
@@ -90,7 +94,9 @@ class SqliteStorage:
     ) -> None:
         """Replace stored transactions"""
         try:
-            with sqlite3.connect(self.file_path) as connection:
+            with closing(
+                sqlite3.connect(self.file_path)
+            ) as connection:
                 connection.execute(
                     "DELETE FROM transactions"
                 )
@@ -126,7 +132,9 @@ class SqliteStorage:
     def load_transactions(self) -> list[Transaction]:
         """Load stored transactions"""
         try:
-            with sqlite3.connect(self.file_path) as connection:
+            with closing(
+                sqlite3.connect(self.file_path)
+            ) as connection:
                 rows = connection.execute(
                     """
                     SELECT

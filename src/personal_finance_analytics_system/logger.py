@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-
 LOGGER_NAME = "personal_finance_analytics_system"
 
 
