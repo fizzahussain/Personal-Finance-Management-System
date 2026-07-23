@@ -65,3 +65,13 @@ class CategoryBudgetResponse(BaseModel):
 
     category: str
     amount: float
+
+class MonthlyReportResponse(BaseModel):
+    """Represent a monthly financial report"""
+
+    month: str
+    income: float
+    expenses: float
+    balance: float
+    savings_rate: float
+    spending_by_category: dict[str, float]

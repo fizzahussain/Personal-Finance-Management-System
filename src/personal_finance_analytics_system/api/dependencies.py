@@ -6,8 +6,14 @@ from personal_finance_analytics_system.budget_manager import (
 from personal_finance_analytics_system.budget_storage import (
     BudgetStorage,
 )
+from personal_finance_analytics_system.report_manager import (
+    ReportManager,
+)
 from personal_finance_analytics_system.services.budget_service import (
     BudgetService,
+)
+from personal_finance_analytics_system.services.report_service import (
+    ReportService,
 )
 from personal_finance_analytics_system.services.transaction_service import (
     TransactionService,
@@ -35,4 +41,13 @@ def get_budget_service() -> BudgetService:
     return BudgetService(
         manager=manager,
         storage=storage,
+    )
+
+def get_report_service() -> ReportService:
+    """Provide the report service"""
+    transaction_service = get_transaction_service()
+
+    return ReportService(
+        report_manager=ReportManager(),
+        transaction_service=transaction_service,
     )
