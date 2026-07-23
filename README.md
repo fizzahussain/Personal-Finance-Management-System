@@ -1,14 +1,33 @@
-# Personal Finance & Data Analytics Management System
+# Personal Finance Analytics System
 
-A modular Python application for managing income, expenses, savings,
-budgets, and investments while providing financial analytics and
-visualizations.
+A command line application for recording income and expenses, managing budgets, generating reports and creating financial charts
 
-## Current Status
+## Features
 
-Initial project setup and clean architecture structure completed.
+- Add income and expense transactions
+- Store transaction dates and descriptions
+- Use JSON CSV or SQLite storage
+- Set a monthly expense budget
+- Set category budgets
+- View budget usage and warning status
+- Filter transactions by category type date and amount
+- View monthly financial reports
+- Export monthly reports to CSV
+- Create category spending pie charts
+- Create monthly income and expense bar charts
+- Validate user input
+- Handle storage and validation errors
+- Write application activity to a log file
 
-## Run
+## Requirements
+
+- Python 3.13 or newer
+- uv
+
+## Installation
+
+Clone the repository
 
 ```bash
-uv run python -m personal_finance_analytics_system.main
+git clone https://github.com/fizza-org/personal-finance-analytics-system.git
+cd personal-finance-analytics-system

@@ -1,28 +1,29 @@
 # Architecture
 
-The project follows clean architecture principles.
+The Personal Finance Analytics System uses a layered architecture that separates user interaction, business logic, storage, reporting, and infrastructure concerns
 
-## Layers
+## Architecture overview
 
-### Domain
-Contains financial entities, enums, exceptions, and business rules.
-
-### Application
-Contains services, use cases, and interfaces.
-
-### Infrastructure
-Contains CSV, JSON, SQLite, logging, and configuration implementations.
-
-### Analytics
-Contains data processing, statistics, and visualizations.
-
-### Presentation
-Contains the command-line interface.
-
-### Utilities
-Contains reusable helpers, validators, decorators, and file utilities.
-
-## Dependency Rule
-
-Core domain code should not depend on databases, command-line tools,
-or visualization libraries. Outer layers may depend on inner layers.
+```text
+User
+  |
+  v
+Command line interface
+  |
+  +-----------------------+
+  |                       |
+  v                       v
+Transaction services    Budget services
+  |                       |
+  +-----------+-----------+
+              |
+              v
+        Report services
+              |
+              v
+       Storage selection
+              |
+       +------+------+ 
+       |      |      |
+       v      v      v
+      JSON   CSV   SQLite
