@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 
+from personal_finance_analytics_system.api.error_handlers import (
+    register_error_handlers,
+)
 from personal_finance_analytics_system.api.routers.budgets import (
     router as budgets_router,
 )
@@ -18,6 +21,8 @@ app = FastAPI(
     description="Backend API for managing personal finance data",
     version="1.0.0",
 )
+
+register_error_handlers(app)
 
 app.include_router(system_router)
 app.include_router(transactions_router)
