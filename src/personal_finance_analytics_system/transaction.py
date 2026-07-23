@@ -12,7 +12,7 @@ class Transaction:
         description: str = "",
         transaction_date: str | None = None,
     ) -> None:
-        self.amount = float(amount)
+        self.amount = self.validate_amount(amount)
         self.transaction_type = transaction_type
         self.category = category
         self.description = description
@@ -21,11 +21,28 @@ class Transaction:
         )
 
     @staticmethod
+    def validate_amount(amount: float) -> float:
+        """Validate and return the amount"""
+        amount = float(amount)
+
+        if amount <= 0:
+            raise ValueError(
+                "Amount must be greater than zero"
+            )
+
+        return amount
+
+    @staticmethod
     def validate_date(
         transaction_date: str | None,
     ) -> str:
         """Validate and return the transaction date"""
-        if transaction_date is None or not transaction_date.strip():
+        if transaction_date is None:
+            return date.today().isoformat()
+
+        transaction_date = transaction_date.strip()
+
+        if not transaction_date:
             return date.today().isoformat()
 
         try:
@@ -39,3 +56,10 @@ class Transaction:
             ) from error
 
         return parsed_date.date().isoformat()
+
+    def get_signed_amount(self) -> float:
+        """Return income as positive and expense as negative"""
+        if self.transaction_type == "expense":
+            return -self.amount
+
+        return self.amount
