@@ -36,6 +36,8 @@ class TransactionCreate(BaseModel):
         """Clean the description"""
         return description.strip()
 
+class TransactionUpdate(TransactionCreate):
+    """Validate transaction updates"""
 
 class TransactionResponse(BaseModel):
     """Represent transaction output"""

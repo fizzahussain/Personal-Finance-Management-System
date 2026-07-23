@@ -71,6 +71,17 @@ class TransactionService:
         """Create and store a transaction"""
         return self.storage.insert_transaction(transaction)
 
+    def update_transaction(
+        self,
+        transaction_id: int,
+        transaction: Transaction,
+    ) -> Transaction | None:
+        """Update one stored transaction"""
+        return self.storage.update_transaction(
+            transaction_id,
+            transaction,
+        )
+    
     def delete_transaction(
         self,
         transaction_id: int,
