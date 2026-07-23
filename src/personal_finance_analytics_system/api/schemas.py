@@ -53,3 +53,15 @@ class TransactionSummaryResponse(BaseModel):
     total_expenses: float
     balance: float
     transaction_count: int
+
+class CategoryBudgetUpdate(BaseModel):
+    """Validate a category budget"""
+
+    amount: float = Field(gt=0)
+
+
+class CategoryBudgetResponse(BaseModel):
+    """Represent a category budget"""
+
+    category: str
+    amount: float

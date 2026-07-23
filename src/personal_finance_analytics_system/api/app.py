@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 
+from personal_finance_analytics_system.api.routers.budgets import (
+    router as budgets_router,
+)
 from personal_finance_analytics_system.api.routers.system import (
     router as system_router,
 )
@@ -15,3 +18,4 @@ app = FastAPI(
 
 app.include_router(system_router)
 app.include_router(transactions_router)
+app.include_router(budgets_router)
