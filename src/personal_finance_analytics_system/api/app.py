@@ -1,22 +1,13 @@
 from fastapi import FastAPI
 
+from personal_finance_analytics_system.api.routers.system import (
+    router as system_router,
+)
+
 app = FastAPI(
     title="Personal Finance Analytics API",
     description="Backend API for managing personal finance data",
     version="1.0.0",
 )
 
-
-@app.get("/")
-def read_root() -> dict[str, str]:
-    """Return basic API information"""
-    return {
-        "name": "Personal Finance Analytics API",
-        "status": "running",
-    }
-
-
-@app.get("/health")
-def health_check() -> dict[str, str]:
-    """Return the API health status"""
-    return {"status": "healthy"}
+app.include_router(system_router)
