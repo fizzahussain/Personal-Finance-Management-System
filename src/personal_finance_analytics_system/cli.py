@@ -1,3 +1,6 @@
+from personal_finance_analytics_system.budget_storage import (
+    BudgetStorage,
+)
 from datetime import date, datetime
 
 from personal_finance_analytics_system.budget_manager import (
@@ -15,6 +18,7 @@ from personal_finance_analytics_system.transaction_manager import (
 storage = None
 manager = TransactionManager()
 budget_manager = BudgetManager()
+budget_storage = BudgetStorage()
 monthly_budget = 0.0
 
 
@@ -222,6 +226,10 @@ def set_category_budget() -> None:
         amount,
     )
 
+    budget_storage.save_budgets(
+        budget_manager.get_all_budgets()
+    )
+
     print(
         f"Budget for {category} set to {amount:.2f}"
     )
@@ -248,6 +256,22 @@ def show_category_budgets() -> None:
             manager.transactions,
         )
 
+
+        percentage = budget_manager.get_budget_percentage(
+            category,
+            manager.transactions,
+        )
+
+        status = budget_manager.get_budget_status(
+            category,
+            manager.transactions,
+        )
+
+        if percentage is not None:
+            print(f"Budget used: {percentage:.1f}%")
+
+        print(f"Status: {status.title()}")
+        
         print(f"\nCategory: {category.title()}")
         print(f"Budget: {budget:.2f}")
         print(f"Spent: {spending:.2f}")
@@ -268,6 +292,8 @@ def run_cli() -> None:
     storage = choose_storage()
     manager = TransactionManager()
     manager.transactions = storage.load_transactions()
+    saved_budgets = budget_storage.load_budgets()
+    budget_manager.load_budgets(saved_budgets)
 
     while True:
         show_menu()
