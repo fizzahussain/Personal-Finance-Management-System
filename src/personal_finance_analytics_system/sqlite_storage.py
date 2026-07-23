@@ -5,7 +5,7 @@ from personal_finance_analytics_system.transaction import Transaction
 
 
 class SqliteStorage:
-    """Manage transaction data in a SQLite database"""
+    """Manage transactions in a SQLite database"""
 
     def __init__(
         self,
@@ -19,9 +19,10 @@ class SqliteStorage:
         )
 
         self.create_table()
+        self.add_date_column()
 
     def create_table(self) -> None:
-        """Create the transactions table if it does not exist"""
+        """Create the transactions table"""
         with sqlite3.connect(self.file_path) as connection:
             connection.execute(
                 """
@@ -30,18 +31,42 @@ class SqliteStorage:
                     amount REAL NOT NULL,
                     transaction_type TEXT NOT NULL,
                     category TEXT NOT NULL,
-                    description TEXT NOT NULL
+                    description TEXT NOT NULL,
+                    transaction_date TEXT NOT NULL DEFAULT ''
                 )
                 """
             )
 
             connection.commit()
 
+    def add_date_column(self) -> None:
+        """Add the date column to older databases"""
+        with sqlite3.connect(self.file_path) as connection:
+            columns = connection.execute(
+                "PRAGMA table_info(transactions)"
+            ).fetchall()
+
+            column_names = [
+                column[1]
+                for column in columns
+            ]
+
+            if "transaction_date" not in column_names:
+                connection.execute(
+                    """
+                    ALTER TABLE transactions
+                    ADD COLUMN transaction_date TEXT
+                    NOT NULL DEFAULT ''
+                    """
+                )
+
+                connection.commit()
+
     def save_transactions(
         self,
         transactions: list[Transaction],
     ) -> None:
-        """Replace stored transactions with the current list"""
+        """Replace stored transactions"""
         with sqlite3.connect(self.file_path) as connection:
             connection.execute(
                 "DELETE FROM transactions"
@@ -54,22 +79,24 @@ class SqliteStorage:
                         amount,
                         transaction_type,
                         category,
-                        description
+                        description,
+                        transaction_date
                     )
-                    VALUES (?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?)
                     """,
                     (
                         transaction.amount,
                         transaction.transaction_type,
                         transaction.category,
                         transaction.description,
+                        transaction.transaction_date,
                     ),
                 )
 
             connection.commit()
 
     def load_transactions(self) -> list[Transaction]:
-        """Load all transactions from the database"""
+        """Load stored transactions"""
         with sqlite3.connect(self.file_path) as connection:
             rows = connection.execute(
                 """
@@ -77,7 +104,8 @@ class SqliteStorage:
                     amount,
                     transaction_type,
                     category,
-                    description
+                    description,
+                    transaction_date
                 FROM transactions
                 ORDER BY id
                 """
@@ -91,6 +119,7 @@ class SqliteStorage:
                 transaction_type=row[1],
                 category=row[2],
                 description=row[3],
+                transaction_date=row[4] or None,
             )
 
             transactions.append(transaction)

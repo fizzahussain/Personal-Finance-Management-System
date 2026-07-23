@@ -5,9 +5,12 @@ from personal_finance_analytics_system.transaction import Transaction
 
 
 class JsonStorage:
-    """Manage transaction data in a json file"""
+    """Manage transaction data in a JSON file"""
 
-    def __init__(self, file_path: str = "data/transactions.json") -> None:
+    def __init__(
+        self,
+        file_path: str = "data/transactions.json",
+    ) -> None:
         self.file_path = Path(file_path)
 
     def save_transactions(
@@ -26,9 +29,14 @@ class JsonStorage:
             data.append(
                 {
                     "amount": transaction.amount,
-                    "transaction_type": transaction.transaction_type,
+                    "transaction_type": (
+                        transaction.transaction_type
+                    ),
                     "category": transaction.category,
                     "description": transaction.description,
+                    "transaction_date": (
+                        transaction.transaction_date
+                    ),
                 }
             )
 
@@ -57,10 +65,13 @@ class JsonStorage:
 
         for item in data:
             transaction = Transaction(
-                item["amount"],
-                item["transaction_type"],
-                item["category"],
-                item.get("description", ""),
+                amount=item["amount"],
+                transaction_type=item["transaction_type"],
+                category=item["category"],
+                description=item.get("description", ""),
+                transaction_date=item.get(
+                    "transaction_date"
+                ),
             )
 
             transactions.append(transaction)

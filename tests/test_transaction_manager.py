@@ -12,6 +12,7 @@ def test_transaction_manager_summary() -> None:
         "income",
         "Salary",
         "Monthly salary",
+        "2026-07-22",
     )
 
     expense = Transaction(

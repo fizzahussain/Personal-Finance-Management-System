@@ -5,7 +5,7 @@ from personal_finance_analytics_system.transaction import Transaction
 
 
 class CsvStorage:
-    """Manage transaction data in a csv file"""
+    """Manage transaction data in a CSV file"""
 
     def __init__(
         self,
@@ -33,6 +33,7 @@ class CsvStorage:
                 "transaction_type",
                 "category",
                 "description",
+                "transaction_date",
             ]
 
             writer = csv.DictWriter(
@@ -51,6 +52,9 @@ class CsvStorage:
                         ),
                         "category": transaction.category,
                         "description": transaction.description,
+                        "transaction_date": (
+                            transaction.transaction_date
+                        ),
                     }
                 )
 
@@ -70,10 +74,13 @@ class CsvStorage:
 
             for row in reader:
                 transaction = Transaction(
-                    float(row["amount"]),
-                    row["transaction_type"],
-                    row["category"],
-                    row["description"],
+                    amount=float(row["amount"]),
+                    transaction_type=row["transaction_type"],
+                    category=row["category"],
+                    description=row.get("description", ""),
+                    transaction_date=row.get(
+                        "transaction_date"
+                    ),
                 )
 
                 transactions.append(transaction)

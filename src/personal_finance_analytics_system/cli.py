@@ -5,6 +5,7 @@ from personal_finance_analytics_system.transaction import Transaction
 from personal_finance_analytics_system.transaction_manager import (
     TransactionManager,
 )
+from datetime import date, datetime
 
 storage = None
 manager = TransactionManager()
@@ -53,6 +54,28 @@ def get_amount(message: str) -> float:
             print("Enter a valid number")
 
 
+def get_transaction_date() -> str:
+    """Get a valid transaction date"""
+    while True:
+        transaction_date = input(
+            "Enter date YYYY-MM-DD or press Enter for today: "
+        ).strip()
+
+        if not transaction_date:
+            return date.today().isoformat()
+
+        try:
+            parsed_date = datetime.strptime(
+                transaction_date,
+                "%Y-%m-%d",
+            )
+        except ValueError:
+            print("Date must use YYYY-MM-DD format")
+            continue
+
+        return parsed_date.date().isoformat()
+
+
 def add_transaction(transaction_type: str) -> None:
     """Add transaction"""
     amount = get_amount("Enter amount: ")
@@ -66,16 +89,22 @@ def add_transaction(transaction_type: str) -> None:
         "Enter description or press Enter to skip: "
     ).strip()
 
+    transaction_date = get_transaction_date()
+
     transaction = Transaction(
-        amount,
-        transaction_type,
-        category,
-        description,
+        amount=amount,
+        transaction_type=transaction_type,
+        category=category,
+        description=description,
+        transaction_date=transaction_date,
     )
 
     manager.add_transaction(transaction)
     storage.save_transactions(manager.transactions)
-    print(f"{transaction_type.title()} added successfully")
+
+    print(
+        f"{transaction_type.title()} added successfully"
+    )
 
 
 def set_budget() -> None:
@@ -162,12 +191,13 @@ def show_transactions() -> None:
         description = transaction.description or "No description"
 
         print(
-            f"{number} "
-            f"{transaction.transaction_type.title()} "
-            f"{transaction.category} "
-            f"{transaction.amount:.2f} "
-            f"{description}"
-        )
+        f"{number} "
+        f"{transaction.transaction_date} "
+        f"{transaction.transaction_type.title()} "
+        f"{transaction.category} "
+        f"{transaction.amount:.2f} "
+        f"{description}"
+    )
 
 
 def run_cli() -> None:
