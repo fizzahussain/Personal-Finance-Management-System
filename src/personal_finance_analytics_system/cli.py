@@ -1,32 +1,31 @@
-from personal_finance_analytics_system.budget_storage import (
-    BudgetStorage,
-)
-from personal_finance_analytics_system.transaction_filter import (
-    TransactionFilter,
-)
 from datetime import date, datetime
 
 from personal_finance_analytics_system.budget_manager import (
     BudgetManager,
 )
-from personal_finance_analytics_system.storage_selection import (
-    create_storage,
-)
-from personal_finance_analytics_system.transaction import Transaction
-from personal_finance_analytics_system.transaction_manager import (
-    TransactionManager,
-)
-from personal_finance_analytics_system.report_manager import (
-    ReportManager,
-)
-from personal_finance_analytics_system.report_exporter import (
-    ReportExporter,
+from personal_finance_analytics_system.budget_storage import (
+    BudgetStorage,
 )
 from personal_finance_analytics_system.chart_manager import (
     ChartManager,
 )
-from personal_finance_analytics_system.exceptions import (
-    FinanceError,
+from personal_finance_analytics_system.exceptions import FinanceError
+from personal_finance_analytics_system.logger import configure_logging
+from personal_finance_analytics_system.report_exporter import (
+    ReportExporter,
+)
+from personal_finance_analytics_system.report_manager import (
+    ReportManager,
+)
+from personal_finance_analytics_system.storage_selection import (
+    create_storage,
+)
+from personal_finance_analytics_system.transaction import Transaction
+from personal_finance_analytics_system.transaction_filter import (
+    TransactionFilter,
+)
+from personal_finance_analytics_system.transaction_manager import (
+    TransactionManager,
 )
 
 storage = None
@@ -36,6 +35,7 @@ budget_storage = BudgetStorage()
 report_manager = ReportManager()
 report_exporter = ReportExporter(report_manager)
 chart_manager = ChartManager(report_manager)
+logger = configure_logging()
 monthly_budget = 0.0
 
 
@@ -53,6 +53,7 @@ def choose_storage():
             return create_storage(choice)
         except ValueError:
             print("Invalid option")
+
 
 def show_menu() -> None:
     """Show menu"""
@@ -73,19 +74,19 @@ def show_menu() -> None:
 
 
 def get_amount(message: str) -> float:
-    """Get valid amount"""
+    """Get a valid amount"""
     while True:
         try:
             amount = float(input(message).strip())
-
-            if amount <= 0:
-                print("Amount must be greater than zero")
-                continue
-
-            return amount
-
         except ValueError:
             print("Enter a valid number")
+            continue
+
+        if amount <= 0:
+            print("Amount must be greater than zero")
+            continue
+
+        return amount
 
 
 def get_transaction_date() -> str:
@@ -111,7 +112,7 @@ def get_transaction_date() -> str:
 
 
 def add_transaction(transaction_type: str) -> None:
-    """Add transaction"""
+    """Add a transaction"""
     amount = get_amount("Enter amount: ")
     category = input("Enter category: ").strip()
 
@@ -137,27 +138,46 @@ def add_transaction(transaction_type: str) -> None:
         manager.add_transaction(transaction)
         storage.save_transactions(manager.transactions)
 
+        logger.info(
+            "Transaction added type=%s category=%s amount=%.2f",
+            transaction.transaction_type,
+            transaction.category,
+            transaction.amount,
+        )
     except FinanceError as error:
+        logger.warning(
+            "Transaction rejected error=%s",
+            error,
+        )
+
         print(error)
         return
 
-    
     print(
         f"{transaction_type.title()} added successfully"
     )
 
 
 def set_budget() -> None:
-    """Set monthly budget"""
+    """Set the monthly budget"""
     global monthly_budget
 
-    monthly_budget = get_amount("Enter monthly expense budget: ")
+    monthly_budget = get_amount(
+        "Enter monthly expense budget: "
+    )
 
-    print(f"Monthly budget set to {monthly_budget:.2f}")
+    logger.info(
+        "Monthly budget updated amount=%.2f",
+        monthly_budget,
+    )
+
+    print(
+        f"Monthly budget set to {monthly_budget:.2f}"
+    )
 
 
 def show_summary() -> None:
-    """Show financial summary"""
+    """Show the financial summary"""
     income = manager.get_total_income()
     expenses = manager.get_total_expenses()
     balance = manager.get_balance()
@@ -184,7 +204,7 @@ def show_summary() -> None:
 
 
 def show_budget_status(expenses: float) -> None:
-    """Show budget status"""
+    """Show the monthly budget status"""
     if monthly_budget == 0:
         print("Monthly budget: not set")
         return
@@ -197,10 +217,13 @@ def show_budget_status(expenses: float) -> None:
 
     if budget_remaining < 0:
         print(
-            f"Budget exceeded by: {abs(budget_remaining):.2f}"
+            f"Budget exceeded by: "
+            f"{abs(budget_remaining):.2f}"
         )
     else:
-        print(f"Budget remaining: {budget_remaining:.2f}")
+        print(
+            f"Budget remaining: {budget_remaining:.2f}"
+        )
 
     if budget_used >= 100:
         print("Budget status: exceeded")
@@ -210,86 +233,42 @@ def show_budget_status(expenses: float) -> None:
         print("Budget status: healthy")
 
 
-def show_monthly_report() -> None:
-    """Show a monthly financial report"""
-    month = input(
-        "Enter month YYYY-MM: "
-    ).strip()
-
-    try:
-        income = report_manager.get_monthly_income(
-            manager.transactions,
-            month,
-        )
-
-        expenses = report_manager.get_monthly_expenses(
-            manager.transactions,
-            month,
-        )
-
-        balance = report_manager.get_monthly_balance(
-            manager.transactions,
-            month,
-        )
-
-        savings_rate = report_manager.get_savings_rate(
-            manager.transactions,
-            month,
-        )
-
-        spending = report_manager.get_spending_by_category(
-            manager.transactions,
-            month,
-        )
-
-    except ValueError as error:
-        print(error)
-        return
-
-    print(f"\nMonthly Report {month}")
-    print(f"Income: {income:.2f}")
-    print(f"Expenses: {expenses:.2f}")
-    print(f"Balance: {balance:.2f}")
-    print(f"Savings rate: {savings_rate:.1f}%")
-
-    print("\nSpending by category")
-
-    if not spending:
-        print("No expense transactions found")
-        return
-
-    for category, amount in spending.items():
-        print(f"{category}: {amount:.2f}")
-
-
-
-
-
-def show_transactions() -> None:
-    """Show transactions"""
-    if not manager.transactions:
+def display_transactions(
+    transactions: list[Transaction],
+) -> None:
+    """Display a transaction list"""
+    if not transactions:
         print("\nNo transactions found")
         return
 
     print("\nTransactions")
 
     for number, transaction in enumerate(
-        manager.transactions,
+        transactions,
         start=1,
     ):
-        description = transaction.description or "No description"
+        description = (
+            transaction.description
+            or "No description"
+        )
 
         print(
-        f"{number} "
-        f"{transaction.transaction_date} "
-        f"{transaction.transaction_type.title()} "
-        f"{transaction.category} "
-        f"{transaction.amount:.2f} "
-        f"{description}"
-    )
+            f"{number} "
+            f"{transaction.transaction_date} "
+            f"{transaction.transaction_type.title()} "
+            f"{transaction.category} "
+            f"{transaction.amount:.2f} "
+            f"{description}"
+        )
+
+
+def show_transactions() -> None:
+    """Show all transactions"""
+    display_transactions(manager.transactions)
+
 
 def set_category_budget() -> None:
-    """Set a budget for a category"""
+    """Set a category budget"""
     category = input("Enter category: ").strip()
 
     while not category:
@@ -307,7 +286,18 @@ def set_category_budget() -> None:
         budget_storage.save_budgets(
             budget_manager.get_all_budgets()
         )
+
+        logger.info(
+            "Category budget updated category=%s amount=%.2f",
+            category,
+            amount,
+        )
     except FinanceError as error:
+        logger.warning(
+            "Category budget rejected error=%s",
+            error,
+        )
+
         print(error)
         return
 
@@ -337,10 +327,11 @@ def show_category_budgets() -> None:
             manager.transactions,
         )
 
-
-        percentage = budget_manager.get_budget_percentage(
-            category,
-            manager.transactions,
+        percentage = (
+            budget_manager.get_budget_percentage(
+                category,
+                manager.transactions,
+            )
         )
 
         status = budget_manager.get_budget_status(
@@ -348,14 +339,16 @@ def show_category_budgets() -> None:
             manager.transactions,
         )
 
-        if percentage is not None:
-            print(f"Budget used: {percentage:.1f}%")
-
-        print(f"Status: {status.title()}")
-        
         print(f"\nCategory: {category.title()}")
         print(f"Budget: {budget:.2f}")
         print(f"Spent: {spending:.2f}")
+
+        if percentage is not None:
+            print(
+                f"Budget used: {percentage:.1f}%"
+            )
+
+        print(f"Status: {status.title()}")
 
         if remaining is not None and remaining < 0:
             print(
@@ -364,30 +357,6 @@ def show_category_budgets() -> None:
         elif remaining is not None:
             print(f"Remaining: {remaining:.2f}")
 
-def display_transactions(
-    transactions: list[Transaction],
-) -> None:
-    """Display a transaction list"""
-    if not transactions:
-        print("\nNo transactions found")
-        return
-
-    print("\nTransactions")
-
-    for number, transaction in enumerate(
-        transactions,
-        start=1,
-    ):
-        description = transaction.description or "No description"
-
-        print(
-            f"{number} "
-            f"{transaction.transaction_date} "
-            f"{transaction.transaction_type.title()} "
-            f"{transaction.category} "
-            f"{transaction.amount:.2f} "
-            f"{description}"
-        )
 
 def show_filter_menu() -> None:
     """Show transaction filters"""
@@ -406,7 +375,9 @@ def filter_transactions() -> None:
         choice = input("Choose an option: ").strip()
 
         if choice == "1":
-            category = input("Enter category: ").strip()
+            category = input(
+                "Enter category: "
+            ).strip()
 
             filtered = TransactionFilter.by_category(
                 manager.transactions,
@@ -448,22 +419,57 @@ def filter_transactions() -> None:
                 "Enter maximum amount or press Enter: "
             ).strip()
 
-            minimum_amount = (
-                float(minimum_text)
-                if minimum_text
-                else None
-            )
+            try:
+                minimum_amount = (
+                    float(minimum_text)
+                    if minimum_text
+                    else None
+                )
 
-            maximum_amount = (
-                float(maximum_text)
-                if maximum_text
-                else None
-            )
+                maximum_amount = (
+                    float(maximum_text)
+                    if maximum_text
+                    else None
+                )
+            except ValueError:
+                print("Amounts must be valid numbers")
+                continue
 
-            filtered = TransactionFilter.by_amount_range(
-                manager.transactions,
-                minimum_amount,
-                maximum_amount,
+            if (
+                minimum_amount is not None
+                and minimum_amount < 0
+            ):
+                print(
+                    "Minimum amount cannot be negative"
+                )
+                continue
+
+            if (
+                maximum_amount is not None
+                and maximum_amount < 0
+            ):
+                print(
+                    "Maximum amount cannot be negative"
+                )
+                continue
+
+            if (
+                minimum_amount is not None
+                and maximum_amount is not None
+                and minimum_amount > maximum_amount
+            ):
+                print(
+                    "Minimum amount cannot exceed "
+                    "maximum amount"
+                )
+                continue
+
+            filtered = (
+                TransactionFilter.by_amount_range(
+                    manager.transactions,
+                    minimum_amount,
+                    maximum_amount,
+                )
             )
 
             display_transactions(filtered)
@@ -474,6 +480,64 @@ def filter_transactions() -> None:
         else:
             print("Invalid option")
 
+
+def show_monthly_report() -> None:
+    """Show a monthly financial report"""
+    month = input(
+        "Enter month YYYY-MM: "
+    ).strip()
+
+    try:
+        income = report_manager.get_monthly_income(
+            manager.transactions,
+            month,
+        )
+
+        expenses = report_manager.get_monthly_expenses(
+            manager.transactions,
+            month,
+        )
+
+        balance = report_manager.get_monthly_balance(
+            manager.transactions,
+            month,
+        )
+
+        savings_rate = report_manager.get_savings_rate(
+            manager.transactions,
+            month,
+        )
+
+        spending = (
+            report_manager.get_spending_by_category(
+                manager.transactions,
+                month,
+            )
+        )
+    except ValueError as error:
+        logger.warning(
+            "Monthly report rejected error=%s",
+            error,
+        )
+
+        print(error)
+        return
+
+    print(f"\nMonthly Report {month}")
+    print(f"Income: {income:.2f}")
+    print(f"Expenses: {expenses:.2f}")
+    print(f"Balance: {balance:.2f}")
+    print(f"Savings rate: {savings_rate:.1f}%")
+    print("\nSpending by category")
+
+    if not spending:
+        print("No expense transactions found")
+        return
+
+    for category, amount in spending.items():
+        print(f"{category}: {amount:.2f}")
+
+
 def export_monthly_report() -> None:
     """Export a monthly report"""
     month = input(
@@ -481,17 +545,28 @@ def export_monthly_report() -> None:
     ).strip()
 
     try:
-        file_path = report_exporter.export_monthly_report(
-            manager.transactions,
-            month,
+        file_path = (
+            report_exporter.export_monthly_report(
+                manager.transactions,
+                month,
+            )
         )
     except ValueError as error:
+        logger.warning(
+            "Report export rejected error=%s",
+            error,
+        )
+
         print(error)
         return
 
-    print(
-        f"Report exported to {file_path}"
+    logger.info(
+        "Monthly report exported month=%s path=%s",
+        month,
+        file_path,
     )
+
+    print(f"Report exported to {file_path}")
 
 
 def create_category_chart() -> None:
@@ -508,12 +583,21 @@ def create_category_chart() -> None:
             )
         )
     except ValueError as error:
+        logger.warning(
+            "Category chart rejected error=%s",
+            error,
+        )
+
         print(error)
         return
 
-    print(
-        f"Chart saved to {file_path}"
+    logger.info(
+        "Category chart created month=%s path=%s",
+        month,
+        file_path,
     )
+
+    print(f"Chart saved to {file_path}")
 
 
 def create_summary_chart() -> None:
@@ -530,28 +614,59 @@ def create_summary_chart() -> None:
             )
         )
     except ValueError as error:
+        logger.warning(
+            "Summary chart rejected error=%s",
+            error,
+        )
+
         print(error)
         return
 
-    print(
-        f"Chart saved to {file_path}"
+    logger.info(
+        "Summary chart created month=%s path=%s",
+        month,
+        file_path,
     )
+
+    print(f"Chart saved to {file_path}")
 
 
 def run_cli() -> None:
-    """Run cli"""
+    """Run the command line interface"""
     global storage
     global manager
 
+    logger.info("Application started")
+
     storage = choose_storage()
     manager = TransactionManager()
-    manager.transactions = storage.load_transactions()
-    saved_budgets = budget_storage.load_budgets()
-    budget_manager.load_budgets(saved_budgets)
+
+    try:
+        manager.transactions = (
+            storage.load_transactions()
+        )
+
+        saved_budgets = (
+            budget_storage.load_budgets()
+        )
+
+        budget_manager.load_budgets(
+            saved_budgets
+        )
+    except FinanceError as error:
+        logger.error(
+            "Application data could not load error=%s",
+            error,
+        )
+
+        print(error)
+        return
 
     while True:
         show_menu()
-        choice = input("Choose an option: ").strip()
+        choice = input(
+            "Choose an option: "
+        ).strip()
 
         if choice == "1":
             add_transaction("income")
@@ -590,10 +705,12 @@ def run_cli() -> None:
             create_summary_chart()
 
         elif choice == "13":
+            logger.info("Application closed")
             print("Goodbye")
             break
 
         else:
             print("Invalid option")
+
 
 run_cli()
