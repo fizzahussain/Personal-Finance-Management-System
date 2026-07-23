@@ -19,12 +19,17 @@ from personal_finance_analytics_system.transaction_manager import (
 from personal_finance_analytics_system.report_manager import (
     ReportManager,
 )
+from personal_finance_analytics_system.report_exporter import (
+    ReportExporter,
+)
+
 
 storage = None
 manager = TransactionManager()
 budget_manager = BudgetManager()
 budget_storage = BudgetStorage()
 report_manager = ReportManager()
+report_exporter = ReportExporter(report_manager)
 monthly_budget = 0.0
 
 
@@ -55,7 +60,8 @@ def show_menu() -> None:
     print("7 View category budgets")
     print("8 Filter transactions")
     print("9 View monthly report")
-    print("10 Exit")
+    print("10 Export monthly report")
+    print("11 Exit")
 
 
 def get_amount(message: str) -> float:
@@ -450,6 +456,28 @@ def filter_transactions() -> None:
         else:
             print("Invalid option")
 
+def export_monthly_report() -> None:
+    """Export a monthly report"""
+    month = input(
+        "Enter month YYYY-MM: "
+    ).strip()
+
+    try:
+        file_path = report_exporter.export_monthly_report(
+            manager.transactions,
+            month,
+        )
+    except ValueError as error:
+        print(error)
+        return
+
+    print(
+        f"Report exported to {file_path}"
+    )
+
+
+
+
 def run_cli() -> None:
     """Run cli"""
     global storage
@@ -493,6 +521,9 @@ def run_cli() -> None:
             show_monthly_report()
 
         elif choice == "10":
+            export_monthly_report()
+
+        elif choice == "11":
             print("Goodbye")
             break
 
