@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+from personal_finance_analytics_system.exceptions import (
+    StorageError,
+)
 from personal_finance_analytics_system.transaction import Transaction
 
 
@@ -40,40 +43,68 @@ class JsonStorage:
                 }
             )
 
-        with self.file_path.open(
-            "w",
-            encoding="utf-8",
-        ) as file:
-            json.dump(
-                data,
-                file,
-                indent=4,
-            )
+        try:
+            with self.file_path.open(
+                "w",
+                encoding="utf-8",
+            ) as file:
+                json.dump(
+                    data,
+                    file,
+                    indent=4,
+                )
+        except OSError as error:
+            raise StorageError(
+                "Unable to save JSON transactions"
+            ) from error
 
     def load_transactions(self) -> list[Transaction]:
         """Load transactions"""
         if not self.file_path.exists():
             return []
 
-        with self.file_path.open(
-            "r",
-            encoding="utf-8",
-        ) as file:
-            data = json.load(file)
+        try:
+            with self.file_path.open(
+                "r",
+                encoding="utf-8",
+            ) as file:
+                data = json.load(file)
+        except json.JSONDecodeError as error:
+            raise StorageError(
+                "JSON transaction file is damaged"
+            ) from error
+        except OSError as error:
+            raise StorageError(
+                "Unable to read JSON transactions"
+            ) from error
+
+        if not isinstance(data, list):
+            raise StorageError(
+                "JSON transaction data must be a list"
+            )
 
         transactions = []
 
-        for item in data:
-            transaction = Transaction(
-                amount=item["amount"],
-                transaction_type=item["transaction_type"],
-                category=item["category"],
-                description=item.get("description", ""),
-                transaction_date=item.get(
-                    "transaction_date"
-                ),
-            )
+        try:
+            for item in data:
+                transaction = Transaction(
+                    amount=item["amount"],
+                    transaction_type=item["transaction_type"],
+                    category=item["category"],
+                    description=item.get("description", ""),
+                    transaction_date=item.get(
+                        "transaction_date"
+                    ),
+                )
 
-            transactions.append(transaction)
+                transactions.append(transaction)
+        except (
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as error:
+            raise StorageError(
+                "JSON transaction data is invalid"
+            ) from error
 
         return transactions

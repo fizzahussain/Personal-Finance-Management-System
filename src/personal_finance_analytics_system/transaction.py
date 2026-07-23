@@ -1,8 +1,17 @@
 from datetime import date, datetime
 
+from personal_finance_analytics_system.exceptions import (
+    InvalidTransactionError,
+)
+
 
 class Transaction:
     """Represent one financial transaction"""
+
+    valid_types = {
+        "income",
+        "expense",
+    }
 
     def __init__(
         self,
@@ -13,9 +22,11 @@ class Transaction:
         transaction_date: str | None = None,
     ) -> None:
         self.amount = self.validate_amount(amount)
-        self.transaction_type = transaction_type
-        self.category = category
-        self.description = description
+        self.transaction_type = self.validate_type(
+            transaction_type
+        )
+        self.category = self.validate_category(category)
+        self.description = description.strip()
         self.transaction_date = self.validate_date(
             transaction_date
         )
@@ -23,14 +34,46 @@ class Transaction:
     @staticmethod
     def validate_amount(amount: float) -> float:
         """Validate and return the amount"""
-        amount = float(amount)
+        try:
+            valid_amount = float(amount)
+        except (TypeError, ValueError) as error:
+            raise InvalidTransactionError(
+                "Amount must be a valid number"
+            ) from error
 
-        if amount <= 0:
-            raise ValueError(
+        if valid_amount <= 0:
+            raise InvalidTransactionError(
                 "Amount must be greater than zero"
             )
 
-        return amount
+        return valid_amount
+
+    @classmethod
+    def validate_type(
+        cls,
+        transaction_type: str,
+    ) -> str:
+        """Validate and return the transaction type"""
+        valid_type = transaction_type.strip().casefold()
+
+        if valid_type not in cls.valid_types:
+            raise InvalidTransactionError(
+                "Transaction type must be income or expense"
+            )
+
+        return valid_type
+
+    @staticmethod
+    def validate_category(category: str) -> str:
+        """Validate and return the category"""
+        valid_category = category.strip()
+
+        if not valid_category:
+            raise InvalidTransactionError(
+                "Category cannot be empty"
+            )
+
+        return valid_category
 
     @staticmethod
     def validate_date(
@@ -40,25 +83,25 @@ class Transaction:
         if transaction_date is None:
             return date.today().isoformat()
 
-        transaction_date = transaction_date.strip()
+        valid_date = transaction_date.strip()
 
-        if not transaction_date:
+        if not valid_date:
             return date.today().isoformat()
 
         try:
             parsed_date = datetime.strptime(
-                transaction_date,
+                valid_date,
                 "%Y-%m-%d",
             )
         except ValueError as error:
-            raise ValueError(
+            raise InvalidTransactionError(
                 "Date must use YYYY-MM-DD format"
             ) from error
 
         return parsed_date.date().isoformat()
 
     def get_signed_amount(self) -> float:
-        """Return income as positive and expense as negative"""
+        """Return the signed transaction amount"""
         if self.transaction_type == "expense":
             return -self.amount
 

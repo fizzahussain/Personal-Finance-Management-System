@@ -1,5 +1,6 @@
-"""Manage category budgets"""
-
+from personal_finance_analytics_system.exceptions import (
+    InvalidBudgetError,
+)
 from personal_finance_analytics_system.transaction import Transaction
 
 
@@ -21,17 +22,25 @@ class BudgetManager:
     ) -> None:
         """Set a budget for a category"""
         category_key = self.normalise_category(category)
-        amount = float(amount)
 
         if not category_key:
-            raise ValueError("Category cannot be empty")
+            raise InvalidBudgetError(
+                "Category cannot be empty"
+            )
 
-        if amount <= 0:
-            raise ValueError(
+        try:
+            valid_amount = float(amount)
+        except (TypeError, ValueError) as error:
+            raise InvalidBudgetError(
+                "Budget must be a valid number"
+            ) from error
+
+        if valid_amount <= 0:
+            raise InvalidBudgetError(
                 "Budget must be greater than zero"
             )
 
-        self.budgets[category_key] = amount
+        self.budgets[category_key] = valid_amount
 
     def get_budget(
         self,
@@ -131,7 +140,23 @@ class BudgetManager:
         budgets: dict[str, float],
     ) -> None:
         """Load saved category budgets"""
-        self.budgets = {
-            self.normalise_category(category): float(amount)
-            for category, amount in budgets.items()
-        }
+        loaded_budgets = {}
+
+        for category, amount in budgets.items():
+            category_key = self.normalise_category(category)
+
+            try:
+                valid_amount = float(amount)
+            except (TypeError, ValueError) as error:
+                raise InvalidBudgetError(
+                    "Stored budget must be a valid number"
+                ) from error
+
+            if not category_key or valid_amount <= 0:
+                raise InvalidBudgetError(
+                    "Stored budget data is invalid"
+                )
+
+            loaded_budgets[category_key] = valid_amount
+
+        self.budgets = loaded_budgets

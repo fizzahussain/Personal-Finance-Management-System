@@ -25,6 +25,9 @@ from personal_finance_analytics_system.report_exporter import (
 from personal_finance_analytics_system.chart_manager import (
     ChartManager,
 )
+from personal_finance_analytics_system.exceptions import (
+    FinanceError,
+)
 
 storage = None
 manager = TransactionManager()
@@ -122,17 +125,23 @@ def add_transaction(transaction_type: str) -> None:
 
     transaction_date = get_transaction_date()
 
-    transaction = Transaction(
-        amount=amount,
-        transaction_type=transaction_type,
-        category=category,
-        description=description,
-        transaction_date=transaction_date,
-    )
+    try:
+        transaction = Transaction(
+            amount=amount,
+            transaction_type=transaction_type,
+            category=category,
+            description=description,
+            transaction_date=transaction_date,
+        )
 
-    manager.add_transaction(transaction)
-    storage.save_transactions(manager.transactions)
+        manager.add_transaction(transaction)
+        storage.save_transactions(manager.transactions)
 
+    except FinanceError as error:
+        print(error)
+        return
+
+    
     print(
         f"{transaction_type.title()} added successfully"
     )
@@ -289,14 +298,18 @@ def set_category_budget() -> None:
 
     amount = get_amount("Enter category budget: ")
 
-    budget_manager.set_budget(
-        category,
-        amount,
-    )
+    try:
+        budget_manager.set_budget(
+            category,
+            amount,
+        )
 
-    budget_storage.save_budgets(
-        budget_manager.get_all_budgets()
-    )
+        budget_storage.save_budgets(
+            budget_manager.get_all_budgets()
+        )
+    except FinanceError as error:
+        print(error)
+        return
 
     print(
         f"Budget for {category} set to {amount:.2f}"
