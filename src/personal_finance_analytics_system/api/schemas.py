@@ -45,3 +45,11 @@ class TransactionResponse(BaseModel):
     category: str
     description: str
     transaction_date: date
+
+class TransactionSummaryResponse(BaseModel):
+    """Represent the transaction summary"""
+
+    total_income: float
+    total_expenses: float
+    balance: float
+    transaction_count: int

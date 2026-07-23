@@ -41,3 +41,67 @@ def test_create_and_list_transactions(
         transactions[0].transaction_date
         == "2026-07-23"
     )
+
+def test_get_transaction_summary(
+    tmp_path: Path,
+) -> None:
+    """Calculate transaction totals"""
+    database_path = tmp_path / "transactions.db"
+    storage = SqliteStorage(str(database_path))
+    service = TransactionService(storage)
+
+    service.create_transaction(
+        Transaction(
+            amount=5000,
+            transaction_type="income",
+            category="Salary",
+            description="Monthly salary",
+            transaction_date="2026-07-01",
+        )
+    )
+
+    service.create_transaction(
+        Transaction(
+            amount=500,
+            transaction_type="expense",
+            category="Food",
+            description="Groceries",
+            transaction_date="2026-07-02",
+        )
+    )
+
+    service.create_transaction(
+        Transaction(
+            amount=250,
+            transaction_type="expense",
+            category="Transport",
+            description="Travel",
+            transaction_date="2026-07-03",
+        )
+    )
+
+    summary = service.get_summary()
+
+    assert summary == {
+        "total_income": 5000,
+        "total_expenses": 750,
+        "balance": 4250,
+        "transaction_count": 3,
+    }
+
+def test_get_empty_transaction_summary(
+    tmp_path: Path,
+) -> None:
+    """Return zero totals without transactions"""
+    database_path = tmp_path / "transactions.db"
+    storage = SqliteStorage(str(database_path))
+    service = TransactionService(storage)
+
+    summary = service.get_summary()
+
+    assert summary == {
+        "total_income": 0,
+        "total_expenses": 0,
+        "balance": 0,
+        "transaction_count": 0,
+    }

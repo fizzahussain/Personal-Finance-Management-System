@@ -169,3 +169,54 @@ def test_rejects_invalid_date(
     )
 
     assert response.status_code == 422
+
+def test_get_empty_transaction_summary(
+    client: TestClient,
+) -> None:
+    """Return an empty transaction summary"""
+    response = client.get("/transactions/summary")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total_income": 0.0,
+        "total_expenses": 0.0,
+        "balance": 0.0,
+        "transaction_count": 0,
+    }
+
+def test_get_transaction_summary(
+    client: TestClient,
+) -> None:
+    """Return calculated transaction totals"""
+    client.post(
+        "/transactions",
+        json={
+            "amount": 5000,
+            "transaction_type": "income",
+            "category": "Salary",
+            "description": "Monthly salary",
+            "transaction_date": "2026-07-01",
+        },
+    )
+
+    client.post(
+        "/transactions",
+        json={
+            "amount": 750,
+            "transaction_type": "expense",
+            "category": "Food",
+            "description": "Groceries",
+            "transaction_date": "2026-07-02",
+        },
+    )
+
+    response = client.get("/transactions/summary")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total_income": 5000.0,
+        "total_expenses": 750.0,
+        "balance": 4250.0,
+        "transaction_count": 2,
+    }
+

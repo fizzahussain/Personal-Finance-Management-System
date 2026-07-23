@@ -8,6 +8,7 @@ from personal_finance_analytics_system.api.dependencies import (
 from personal_finance_analytics_system.api.schemas import (
     TransactionCreate,
     TransactionResponse,
+    TransactionSummaryResponse,
 )
 from personal_finance_analytics_system.exceptions import FinanceError
 from personal_finance_analytics_system.services.transaction_service import (
@@ -60,6 +61,30 @@ def list_transactions(
         for transaction in transactions
     ]
 
+
+@router.get(
+    "/summary",
+    response_model=TransactionSummaryResponse,
+)
+
+def get_transaction_summary(
+    service: TransactionServiceDependency,
+) -> TransactionSummaryResponse:
+    """Return the transaction summary"""
+    try:
+        summary = service.get_summary()
+    except FinanceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        ) from error
+
+    return TransactionSummaryResponse(
+        total_income=float(summary["total_income"]),
+        total_expenses=float(summary["total_expenses"]),
+        balance=float(summary["balance"]),
+        transaction_count=int(summary["transaction_count"]),
+    )
 
 @router.post(
     "",
