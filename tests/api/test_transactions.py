@@ -220,3 +220,192 @@ def test_get_transaction_summary(
         "transaction_count": 2,
     }
 
+def create_test_transaction(
+    client: TestClient,
+    amount: float,
+    transaction_type: str,
+    category: str,
+    transaction_date: str,
+) -> None:
+    """Create a transaction through the API"""
+    response = client.post(
+        "/transactions",
+        json={
+            "amount": amount,
+            "transaction_type": transaction_type,
+            "category": category,
+            "description": "",
+            "transaction_date": transaction_date,
+        },
+    )
+
+    assert response.status_code == 201
+
+def test_filter_transactions_by_category(
+    client: TestClient,
+) -> None:
+    """Filter transactions by category"""
+    create_test_transaction(
+        client,
+        500,
+        "expense",
+        "Food",
+        "2026-07-02",
+    )
+    create_test_transaction(
+        client,
+        250,
+        "expense",
+        "Transport",
+        "2026-07-03",
+    )
+
+    response = client.get(
+        "/transactions",
+        params={"category": "Food"},
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["category"] == "Food"
+
+
+def test_filter_transactions_by_type(
+    client: TestClient,
+) -> None:
+    """Filter transactions by type"""
+    create_test_transaction(
+        client,
+        5000,
+        "income",
+        "Salary",
+        "2026-07-01",
+    )
+    create_test_transaction(
+        client,
+        500,
+        "expense",
+        "Food",
+        "2026-07-02",
+    )
+
+    response = client.get(
+        "/transactions",
+        params={"transaction_type": "expense"},
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert (
+        response.json()[0]["transaction_type"]
+        == "expense"
+    )
+
+
+def test_filter_transactions_by_date(
+    client: TestClient,
+) -> None:
+    """Filter transactions by date"""
+    create_test_transaction(
+        client,
+        500,
+        "expense",
+        "Food",
+        "2026-07-02",
+    )
+
+    response = client.get(
+        "/transactions",
+        params={
+            "transaction_date": "2026-07-02",
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+
+def test_filter_transactions_by_amount_range(
+    client: TestClient,
+) -> None:
+    """Filter transactions by amount range"""
+    create_test_transaction(
+        client,
+        100,
+        "expense",
+        "Food",
+        "2026-07-01",
+    )
+    create_test_transaction(
+        client,
+        500,
+        "expense",
+        "Transport",
+        "2026-07-02",
+    )
+    create_test_transaction(
+        client,
+        1000,
+        "income",
+        "Salary",
+        "2026-07-03",
+    )
+
+    response = client.get(
+        "/transactions",
+        params={
+            "minimum_amount": 200,
+            "maximum_amount": 700,
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["amount"] == 500.0
+
+
+def test_rejects_reversed_amount_range(
+    client: TestClient,
+) -> None:
+    """Reject a reversed amount range"""
+    response = client.get(
+        "/transactions",
+        params={
+            "minimum_amount": 500,
+            "maximum_amount": 100,
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "Minimum amount cannot exceed maximum amount"
+    )
+
+
+def test_rejects_invalid_filter_type(
+    client: TestClient,
+) -> None:
+    """Reject an invalid transaction type filter"""
+    response = client.get(
+        "/transactions",
+        params={
+            "transaction_type": "transfer",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_rejects_invalid_filter_date(
+    client: TestClient,
+) -> None:
+    """Reject an invalid transaction date filter"""
+    response = client.get(
+        "/transactions",
+        params={
+            "transaction_date": "02-07-2026",
+        },
+    )
+
+    assert response.status_code == 422
+

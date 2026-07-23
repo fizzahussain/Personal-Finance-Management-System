@@ -1,6 +1,13 @@
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+)
 
 from personal_finance_analytics_system.api.dependencies import (
     get_transaction_service,
@@ -46,10 +53,55 @@ def create_response(
 )
 def list_transactions(
     service: TransactionServiceDependency,
+    category: Annotated[
+        str | None,
+        Query(min_length=1),
+    ] = None,
+    transaction_type: Literal[
+        "income",
+        "expense",
+    ]
+    | None = None,
+    transaction_date: date | None = None,
+    minimum_amount: Annotated[
+        float | None,
+        Query(ge=0),
+    ] = None,
+    maximum_amount: Annotated[
+        float | None,
+        Query(ge=0),
+    ] = None,
 ) -> list[TransactionResponse]:
-    """Return all transactions"""
+    """Return transactions matching the filters"""
+    if (
+        minimum_amount is not None
+        and maximum_amount is not None
+        and minimum_amount > maximum_amount
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "Minimum amount cannot exceed maximum amount"
+            ),
+        )
+
     try:
-        transactions = service.list_transactions()
+        transactions = service.list_transactions(
+            category=category,
+            transaction_type=transaction_type,
+            transaction_date=(
+                transaction_date.isoformat()
+                if transaction_date
+                else None
+            ),
+            minimum_amount=minimum_amount,
+            maximum_amount=maximum_amount,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(error),
+        ) from error
     except FinanceError as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

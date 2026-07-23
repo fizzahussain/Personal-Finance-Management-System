@@ -105,3 +105,114 @@ def test_get_empty_transaction_summary(
         "balance": 0,
         "transaction_count": 0,
     }
+
+def create_service_with_transactions(
+    tmp_path: Path,
+) -> TransactionService:
+    """Create a service containing test transactions"""
+    database_path = tmp_path / "transactions.db"
+    storage = SqliteStorage(str(database_path))
+    service = TransactionService(storage)
+
+    transactions = [
+        Transaction(
+            amount=5000,
+            transaction_type="income",
+            category="Salary",
+            description="Monthly salary",
+            transaction_date="2026-07-01",
+        ),
+        Transaction(
+            amount=500,
+            transaction_type="expense",
+            category="Food",
+            description="Groceries",
+            transaction_date="2026-07-02",
+        ),
+        Transaction(
+            amount=250,
+            transaction_type="expense",
+            category="Transport",
+            description="Bus pass",
+            transaction_date="2026-07-03",
+        ),
+    ]
+
+    for transaction in transactions:
+        service.create_transaction(transaction)
+
+    return service
+
+def test_filter_transactions_by_category(
+    tmp_path: Path,
+) -> None:
+    """Filter transactions by category"""
+    service = create_service_with_transactions(tmp_path)
+
+    transactions = service.list_transactions(
+        category="Food",
+    )
+
+    assert len(transactions) == 1
+    assert transactions[0].category == "Food"
+
+
+def test_filter_transactions_by_type(
+    tmp_path: Path,
+) -> None:
+    """Filter transactions by transaction type"""
+    service = create_service_with_transactions(tmp_path)
+
+    transactions = service.list_transactions(
+        transaction_type="expense",
+    )
+
+    assert len(transactions) == 2
+    assert all(
+        transaction.transaction_type == "expense"
+        for transaction in transactions
+    )
+
+
+def test_filter_transactions_by_date(
+    tmp_path: Path,
+) -> None:
+    """Filter transactions by date"""
+    service = create_service_with_transactions(tmp_path)
+
+    transactions = service.list_transactions(
+        transaction_date="2026-07-03",
+    )
+
+    assert len(transactions) == 1
+    assert transactions[0].category == "Transport"
+
+
+def test_filter_transactions_by_amount_range(
+    tmp_path: Path,
+) -> None:
+    """Filter transactions by amount range"""
+    service = create_service_with_transactions(tmp_path)
+
+    transactions = service.list_transactions(
+        minimum_amount=300,
+        maximum_amount=1000,
+    )
+
+    assert len(transactions) == 1
+    assert transactions[0].amount == 500
+
+
+def test_combine_transaction_filters(
+    tmp_path: Path,
+) -> None:
+    """Combine multiple transaction filters"""
+    service = create_service_with_transactions(tmp_path)
+
+    transactions = service.list_transactions(
+        transaction_type="expense",
+        minimum_amount=300,
+    )
+
+    assert len(transactions) == 1
+    assert transactions[0].category == "Food"

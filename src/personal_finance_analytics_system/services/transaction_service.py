@@ -2,6 +2,9 @@ from personal_finance_analytics_system.sqlite_storage import (
     SqliteStorage,
 )
 from personal_finance_analytics_system.transaction import Transaction
+from personal_finance_analytics_system.transaction_filter import (
+    TransactionFilter,
+)
 
 
 class TransactionService:
@@ -15,9 +18,44 @@ class TransactionService:
 
     def list_transactions(
         self,
+        category: str | None = None,
+        transaction_type: str | None = None,
+        transaction_date: str | None = None,
+        minimum_amount: float | None = None,
+        maximum_amount: float | None = None,
     ) -> list[Transaction]:
-        """Return all stored transactions"""
-        return self.storage.load_transactions()
+        """Return transactions matching the filters"""
+        transactions = self.storage.load_transactions()
+
+        if category is not None:
+            transactions = TransactionFilter.by_category(
+                transactions,
+                category,
+            )
+
+        if transaction_type is not None:
+            transactions = TransactionFilter.by_type(
+                transactions,
+                transaction_type,
+            )
+
+        if transaction_date is not None:
+            transactions = TransactionFilter.by_date(
+                transactions,
+                transaction_date,
+            )
+
+        if (
+            minimum_amount is not None
+            or maximum_amount is not None
+        ):
+            transactions = TransactionFilter.by_amount_range(
+                transactions,
+                minimum_amount,
+                maximum_amount,
+            )
+
+        return transactions
 
     def create_transaction(
         self,
