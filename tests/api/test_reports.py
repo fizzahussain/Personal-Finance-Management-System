@@ -51,7 +51,7 @@ def test_get_empty_monthly_report(
     client: TestClient,
 ) -> None:
     """Return an empty monthly report"""
-    response = client.get("/reports/monthly/2026-07")
+    response = client.get("/api/v1/reports/monthly/2026-07")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -102,7 +102,7 @@ def test_get_monthly_report(
         )
     )
 
-    response = client.get("/reports/monthly/2026-07")
+    response = client.get("/api/v1/reports/monthly/2026-07")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -136,7 +136,7 @@ def test_monthly_report_ignores_other_months(
         )
     )
 
-    response = client.get("/reports/monthly/2026-07")
+    response = client.get("/api/v1/reports/monthly/2026-07")
 
     assert response.status_code == 200
     assert response.json()["income"] == 0.0
@@ -147,7 +147,7 @@ def test_rejects_invalid_report_month(
 ) -> None:
     """Reject an invalid report month"""
     response = client.get(
-        "/reports/monthly/invalid-month"
+        "/api/v1/reports/monthly/invalid-month"
     )
 
     assert response.status_code == 422

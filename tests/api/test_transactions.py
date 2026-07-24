@@ -39,7 +39,7 @@ def test_list_transactions_is_initially_empty(
     client: TestClient,
 ) -> None:
     """Return an empty transaction list"""
-    response = client.get("/transactions")
+    response = client.get("/api/v1/transactions")
 
     assert response.status_code == 200
     assert response.json() == []
@@ -50,7 +50,7 @@ def test_create_transaction(
 ) -> None:
     """Create a transaction"""
     response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 250,
             "transaction_type": "expense",
@@ -76,7 +76,7 @@ def test_created_transaction_is_returned(
 ) -> None:
     """Return a previously created transaction"""
     client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 5000,
             "transaction_type": "income",
@@ -86,7 +86,7 @@ def test_created_transaction_is_returned(
         },
     )
 
-    response = client.get("/transactions")
+    response = client.get("/api/v1/transactions")
 
     assert response.status_code == 200
     assert response.json() == [
@@ -106,7 +106,7 @@ def test_rejects_invalid_amount(
 ) -> None:
     """Reject a non-positive amount"""
     response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 0,
             "transaction_type": "expense",
@@ -124,7 +124,7 @@ def test_rejects_invalid_transaction_type(
 ) -> None:
     """Reject an invalid transaction type"""
     response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 100,
             "transaction_type": "transfer",
@@ -142,7 +142,7 @@ def test_rejects_missing_transaction_type(
 ) -> None:
     """Reject a missing transaction type"""
     response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 100,
             "category": "Food",
@@ -159,7 +159,7 @@ def test_rejects_null_transaction_type(
 ) -> None:
     """Reject a null transaction type"""
     response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 100,
             "transaction_type": None,
@@ -177,7 +177,7 @@ def test_rejects_empty_category(
 ) -> None:
     """Reject an empty category"""
     response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 100,
             "transaction_type": "expense",
@@ -195,7 +195,7 @@ def test_rejects_invalid_date(
 ) -> None:
     """Reject an invalid transaction date"""
     response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 100,
             "transaction_type": "expense",
@@ -212,7 +212,7 @@ def test_get_empty_transaction_summary(
     client: TestClient,
 ) -> None:
     """Return an empty transaction summary"""
-    response = client.get("/transactions/summary")
+    response = client.get("/api/v1/transactions/summary")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -228,7 +228,7 @@ def test_get_transaction_summary(
 ) -> None:
     """Return calculated transaction totals"""
     client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 5000,
             "transaction_type": "income",
@@ -239,7 +239,7 @@ def test_get_transaction_summary(
     )
 
     client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 750,
             "transaction_type": "expense",
@@ -249,7 +249,7 @@ def test_get_transaction_summary(
         },
     )
 
-    response = client.get("/transactions/summary")
+    response = client.get("/api/v1/transactions/summary")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -269,7 +269,7 @@ def create_test_transaction(
 ) -> None:
     """Create a transaction through the API"""
     response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": amount,
             "transaction_type": transaction_type,
@@ -302,7 +302,7 @@ def test_filter_transactions_by_category(
     )
 
     response = client.get(
-        "/transactions",
+        "/api/v1/transactions",
         params={"category": "Food"},
     )
 
@@ -331,7 +331,7 @@ def test_filter_transactions_by_type(
     )
 
     response = client.get(
-        "/transactions",
+        "/api/v1/transactions",
         params={"transaction_type": "expense"},
     )
 
@@ -356,7 +356,7 @@ def test_filter_transactions_by_date(
     )
 
     response = client.get(
-        "/transactions",
+        "/api/v1/transactions",
         params={
             "transaction_date": "2026-07-02",
         },
@@ -393,7 +393,7 @@ def test_filter_transactions_by_amount_range(
     )
 
     response = client.get(
-        "/transactions",
+        "/api/v1/transactions",
         params={
             "minimum_amount": 200,
             "maximum_amount": 700,
@@ -410,7 +410,7 @@ def test_rejects_reversed_amount_range(
 ) -> None:
     """Reject a reversed amount range"""
     response = client.get(
-        "/transactions",
+        "/api/v1/transactions",
         params={
             "minimum_amount": 500,
             "maximum_amount": 100,
@@ -428,7 +428,7 @@ def test_rejects_invalid_filter_type(
 ) -> None:
     """Reject an invalid transaction type filter"""
     response = client.get(
-        "/transactions",
+        "/api/v1/transactions",
         params={
             "transaction_type": "transfer",
         },
@@ -442,7 +442,7 @@ def test_rejects_invalid_filter_date(
 ) -> None:
     """Reject an invalid transaction date filter"""
     response = client.get(
-        "/transactions",
+        "/api/v1/transactions",
         params={
             "transaction_date": "02-07-2026",
         },
@@ -456,7 +456,7 @@ def test_get_transaction_by_id(
 ) -> None:
     """Return one transaction by ID"""
     created_response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 500,
             "transaction_type": "expense",
@@ -471,7 +471,7 @@ def test_get_transaction_by_id(
     ]
 
     response = client.get(
-        f"/transactions/{transaction_id}"
+        f"/api/v1/transactions/{transaction_id}"
     )
 
     assert response.status_code == 200
@@ -489,7 +489,7 @@ def test_get_missing_transaction(
     client: TestClient,
 ) -> None:
     """Return not found for a missing transaction"""
-    response = client.get("/transactions/999")
+    response = client.get("/api/v1/transactions/999")
 
     assert response.status_code == 404
     assert response.json() == {
@@ -502,7 +502,7 @@ def test_update_transaction_is_not_allowed(
 ) -> None:
     """Reject transaction updates"""
     created_response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 500,
             "transaction_type": "expense",
@@ -517,7 +517,7 @@ def test_update_transaction_is_not_allowed(
     ]
 
     response = client.put(
-        f"/transactions/{transaction_id}",
+        f"/api/v1/transactions/{transaction_id}",
         json={
             "amount": 750,
             "transaction_type": "expense",
@@ -535,7 +535,7 @@ def test_delete_transaction_is_not_allowed(
 ) -> None:
     """Reject transaction deletion"""
     created_response = client.post(
-        "/transactions",
+        "/api/v1/transactions",
         json={
             "amount": 500,
             "transaction_type": "expense",
@@ -550,7 +550,7 @@ def test_delete_transaction_is_not_allowed(
     ]
 
     response = client.delete(
-        f"/transactions/{transaction_id}"
+        f"/api/v1/transactions/{transaction_id}"
     )
 
     assert response.status_code == 405

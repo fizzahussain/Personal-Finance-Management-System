@@ -16,15 +16,32 @@ from personal_finance_analytics_system.api.routers.transactions import (
     router as transactions_router,
 )
 
+API_PREFIX = "/api/v1"
+
 app = FastAPI(
     title="Personal Finance Analytics API",
-    description="Backend API for managing personal finance data",
+    description=(
+        "Backend API for managing personal finance data, "
+        "including transactions, budgets, summaries, and reports"
+    ),
     version="1.0.0",
 )
 
 register_error_handlers(app)
 
-app.include_router(system_router)
-app.include_router(transactions_router)
-app.include_router(budgets_router)
-app.include_router(reports_router)
+app.include_router(
+    system_router,
+    prefix=API_PREFIX,
+)
+app.include_router(
+    transactions_router,
+    prefix=API_PREFIX,
+)
+app.include_router(
+    budgets_router,
+    prefix=API_PREFIX,
+)
+app.include_router(
+    reports_router,
+    prefix=API_PREFIX,
+)
