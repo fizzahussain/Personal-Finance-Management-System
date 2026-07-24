@@ -24,6 +24,7 @@ A command line application for recording income and expenses, managing budgets, 
 - Python 3.13 or newer
 - uv
 
+
 ## Installation
 
 Clone the repository
@@ -31,3 +32,13 @@ Clone the repository
 ```bash
 git clone https://github.com/fizza-org/personal-finance-analytics-system.git
 cd personal-finance-analytics-system
+
+
+## FastAPI backend
+
+The project includes a FastAPI backend for managing transactions, budgets, and financial reports
+
+Run the API:
+
+```bash
+uv run fastapi dev src/personal_finance_analytics_system/api/app.py
