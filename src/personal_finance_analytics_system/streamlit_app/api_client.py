@@ -78,26 +78,6 @@ def create_transaction(
     )
 
 
-def update_transaction(
-    transaction_id: int,
-    transaction: dict[str, Any],
-) -> dict[str, Any]:
-    """Update one transaction"""
-    return request(
-        "PUT",
-        f"/transactions/{transaction_id}",
-        json=transaction,
-    )
-
-
-def delete_transaction(
-    transaction_id: int,
-) -> None:
-    """Delete one transaction"""
-    request(
-        "DELETE",
-        f"/transactions/{transaction_id}",
-    )
 
 
 def get_summary() -> dict[str, Any]:

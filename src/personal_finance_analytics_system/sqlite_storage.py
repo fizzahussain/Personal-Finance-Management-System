@@ -174,77 +174,7 @@ class SqliteStorage:
                 "SQLite transaction data is invalid"
             ) from error
 
-    def update_transaction(
-        self,
-        transaction_id: int,
-        transaction: Transaction,
-    ) -> Transaction | None:
-        """Update one transaction by ID"""
-        try:
-            with closing(
-                sqlite3.connect(self.file_path)
-            ) as connection:
-                cursor = connection.execute(
-                    """
-                    UPDATE transactions
-                    SET
-                        amount = ?,
-                        transaction_type = ?,
-                        category = ?,
-                        description = ?,
-                        transaction_date = ?
-                    WHERE id = ?
-                    """,
-                    (
-                        transaction.amount,
-                        transaction.transaction_type,
-                        transaction.category,
-                        transaction.description,
-                        transaction.transaction_date,
-                        transaction_id,
-                    ),
-                )
-
-                connection.commit()
-
-        except sqlite3.Error as error:
-            raise StorageError(
-                "Unable to update SQLite transaction"
-            ) from error
-
-        if cursor.rowcount == 0:
-            return None
-
-        transaction.transaction_id = transaction_id
-
-        return transaction
-
-    def delete_transaction(
-        self,
-        transaction_id: int,
-    ) -> bool:
-        """Delete one transaction by ID"""
-        try:
-            with closing(
-                sqlite3.connect(self.file_path)
-            ) as connection:
-                cursor = connection.execute(
-                    """
-                    DELETE FROM transactions
-                    WHERE id = ?
-                    """,
-                    (transaction_id,),
-                )
-
-                connection.commit()
-
-                return cursor.rowcount > 0
-
-        except sqlite3.Error as error:
-            raise StorageError(
-                "Unable to delete SQLite transaction"
-            ) from error
-
+   
     def save_transactions(
         self,
         transactions: list[Transaction],

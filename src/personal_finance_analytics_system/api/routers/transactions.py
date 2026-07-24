@@ -6,7 +6,6 @@ from fastapi import (
     Depends,
     HTTPException,
     Query,
-    Response,
     status,
 )
 
@@ -17,7 +16,6 @@ from personal_finance_analytics_system.api.schemas import (
     TransactionCreate,
     TransactionResponse,
     TransactionSummaryResponse,
-    TransactionUpdate,
 )
 from personal_finance_analytics_system.exceptions import FinanceError
 from personal_finance_analytics_system.services.transaction_service import (
@@ -208,71 +206,3 @@ def create_transaction(
     return create_response(created_transaction)
 
 
-@router.put(
-    "/{transaction_id}",
-    response_model=TransactionResponse,
-)
-def update_transaction(
-    transaction_id: int,
-    transaction_data: TransactionUpdate,
-    service: TransactionServiceDependency,
-) -> TransactionResponse:
-    """Update one transaction"""
-    try:
-        transaction = Transaction(
-            amount=transaction_data.amount,
-            transaction_type=transaction_data.transaction_type,
-            category=transaction_data.category,
-            description=transaction_data.description,
-            transaction_date=(
-                transaction_data.transaction_date.isoformat()
-            ),
-        )
-
-        updated_transaction = service.update_transaction(
-            transaction_id,
-            transaction,
-        )
-    except FinanceError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(error),
-        ) from error
-
-    if updated_transaction is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transaction not found",
-        )
-
-    return create_response(updated_transaction)
-
-
-@router.delete(
-    "/{transaction_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def delete_transaction(
-    transaction_id: int,
-    service: TransactionServiceDependency,
-) -> Response:
-    """Delete one transaction"""
-    try:
-        deleted = service.delete_transaction(
-            transaction_id
-        )
-    except FinanceError as error:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(error),
-        ) from error
-
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transaction not found",
-        )
-
-    return Response(
-        status_code=status.HTTP_204_NO_CONTENT
-    )

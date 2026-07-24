@@ -44,6 +44,7 @@ def test_list_transactions_is_initially_empty(
     assert response.status_code == 200
     assert response.json() == []
 
+
 def test_create_transaction(
     client: TestClient,
 ) -> None:
@@ -136,6 +137,41 @@ def test_rejects_invalid_transaction_type(
     assert response.status_code == 422
 
 
+def test_rejects_missing_transaction_type(
+    client: TestClient,
+) -> None:
+    """Reject a missing transaction type"""
+    response = client.post(
+        "/transactions",
+        json={
+            "amount": 100,
+            "category": "Food",
+            "description": "",
+            "transaction_date": "2026-07-23",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_rejects_null_transaction_type(
+    client: TestClient,
+) -> None:
+    """Reject a null transaction type"""
+    response = client.post(
+        "/transactions",
+        json={
+            "amount": 100,
+            "transaction_type": None,
+            "category": "Food",
+            "description": "",
+            "transaction_date": "2026-07-23",
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_rejects_empty_category(
     client: TestClient,
 ) -> None:
@@ -171,6 +207,7 @@ def test_rejects_invalid_date(
 
     assert response.status_code == 422
 
+
 def test_get_empty_transaction_summary(
     client: TestClient,
 ) -> None:
@@ -184,6 +221,7 @@ def test_get_empty_transaction_summary(
         "balance": 0.0,
         "transaction_count": 0,
     }
+
 
 def test_get_transaction_summary(
     client: TestClient,
@@ -221,6 +259,7 @@ def test_get_transaction_summary(
         "transaction_count": 2,
     }
 
+
 def create_test_transaction(
     client: TestClient,
     amount: float,
@@ -241,6 +280,7 @@ def create_test_transaction(
     )
 
     assert response.status_code == 201
+
 
 def test_filter_transactions_by_category(
     client: TestClient,
@@ -410,6 +450,7 @@ def test_rejects_invalid_filter_date(
 
     assert response.status_code == 422
 
+
 def test_get_transaction_by_id(
     client: TestClient,
 ) -> None:
@@ -456,99 +497,10 @@ def test_get_missing_transaction(
     }
 
 
-def test_delete_transaction(
+def test_update_transaction_is_not_allowed(
     client: TestClient,
 ) -> None:
-    """Delete one transaction"""
-    created_response = client.post(
-        "/transactions",
-        json={
-            "amount": 500,
-            "transaction_type": "expense",
-            "category": "Food",
-            "description": "Groceries",
-            "transaction_date": "2026-07-23",
-        },
-    )
-
-    transaction_id = created_response.json()[
-        "transaction_id"
-    ]
-
-    response = client.delete(
-        f"/transactions/{transaction_id}"
-    )
-
-    assert response.status_code == 204
-    assert response.content == b""
-
-    get_response = client.get(
-        f"/transactions/{transaction_id}"
-    )
-
-    assert get_response.status_code == 404
-
-
-def test_delete_missing_transaction(
-    client: TestClient,
-) -> None:
-    """Return not found when deleting a missing transaction"""
-    response = client.delete("/transactions/999")
-
-    assert response.status_code == 404
-    assert response.json() == {
-        "detail": "Transaction not found",
-    }
-
-
-def test_deleted_transaction_is_removed_from_summary(
-    client: TestClient,
-) -> None:
-    """Remove a deleted transaction from the summary"""
-    income_response = client.post(
-        "/transactions",
-        json={
-            "amount": 5000,
-            "transaction_type": "income",
-            "category": "Salary",
-            "description": "",
-            "transaction_date": "2026-07-01",
-        },
-    )
-
-    client.post(
-        "/transactions",
-        json={
-            "amount": 500,
-            "transaction_type": "expense",
-            "category": "Food",
-            "description": "",
-            "transaction_date": "2026-07-02",
-        },
-    )
-
-    transaction_id = income_response.json()[
-        "transaction_id"
-    ]
-
-    client.delete(
-        f"/transactions/{transaction_id}"
-    )
-
-    response = client.get("/transactions/summary")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "total_income": 0.0,
-        "total_expenses": 500.0,
-        "balance": -500.0,
-        "transaction_count": 1,
-    }
-
-def test_update_transaction(
-    client: TestClient,
-) -> None:
-    """Update one transaction"""
+    """Reject transaction updates"""
     created_response = client.post(
         "/transactions",
         json={
@@ -570,54 +522,18 @@ def test_update_transaction(
             "amount": 750,
             "transaction_type": "expense",
             "category": "Food",
-            "description": "Groceries and supplies",
+            "description": "Updated",
             "transaction_date": "2026-07-24",
         },
     )
 
-    assert response.status_code == 200
-    assert response.json() == {
-        "transaction_id": transaction_id,
-        "amount": 750.0,
-        "transaction_type": "expense",
-        "category": "Food",
-        "description": "Groceries and supplies",
-        "transaction_date": "2026-07-24",
-    }
-
-    get_response = client.get(
-        f"/transactions/{transaction_id}"
-    )
-
-    assert get_response.status_code == 200
-    assert get_response.json() == response.json()
+    assert response.status_code == 405
 
 
-def test_update_missing_transaction(
+def test_delete_transaction_is_not_allowed(
     client: TestClient,
 ) -> None:
-    """Return not found when updating a missing transaction"""
-    response = client.put(
-        "/transactions/999",
-        json={
-            "amount": 500,
-            "transaction_type": "expense",
-            "category": "Food",
-            "description": "Groceries",
-            "transaction_date": "2026-07-23",
-        },
-    )
-
-    assert response.status_code == 404
-    assert response.json() == {
-        "detail": "Transaction not found",
-    }
-
-
-def test_rejects_invalid_transaction_update(
-    client: TestClient,
-) -> None:
-    """Reject invalid transaction update data"""
+    """Reject transaction deletion"""
     created_response = client.post(
         "/transactions",
         json={
@@ -633,15 +549,8 @@ def test_rejects_invalid_transaction_update(
         "transaction_id"
     ]
 
-    response = client.put(
-        f"/transactions/{transaction_id}",
-        json={
-            "amount": 0,
-            "transaction_type": "expense",
-            "category": "",
-            "description": "",
-            "transaction_date": "invalid-date",
-        },
+    response = client.delete(
+        f"/transactions/{transaction_id}"
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 405

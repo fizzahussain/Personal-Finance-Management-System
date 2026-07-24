@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 
 import pandas as pd
 import streamlit as st
@@ -6,14 +6,12 @@ import streamlit as st
 from personal_finance_analytics_system.streamlit_app.api_client import (
     ApiClientError,
     create_transaction,
-    delete_transaction,
     get_budget_statuses,
     get_budgets,
     get_monthly_report,
     get_summary,
     get_transactions,
     set_budget,
-    update_transaction,
 )
 
 st.set_page_config(
@@ -82,127 +80,6 @@ def show_error(error: ApiClientError) -> None:
 def format_currency(amount: float) -> str:
     """Format a currency value"""
     return f"${amount:,.2f}"
-
-
-@st.dialog("Edit transaction")
-def edit_transaction_dialog(
-    transaction: dict[str, object],
-) -> None:
-    """Edit one transaction"""
-    transaction_id = int(transaction["transaction_id"])
-
-    existing_date = datetime.strptime(
-        str(transaction["transaction_date"]),
-        "%Y-%m-%d",
-    ).date()
-
-    with st.form(
-        f"edit_transaction_{transaction_id}"
-    ):
-        transaction_type = st.selectbox(
-            "Transaction type",
-            ["income", "expense"],
-            index=(
-                0
-                if transaction["transaction_type"]
-                == "income"
-                else 1
-            ),
-        )
-
-        amount = st.number_input(
-            "Amount",
-            min_value=0.01,
-            value=float(transaction["amount"]),
-            step=1.0,
-        )
-
-        category = st.text_input(
-            "Category",
-            value=str(transaction["category"]),
-        )
-
-        description = st.text_input(
-            "Description",
-            value=str(transaction["description"]),
-        )
-
-        transaction_date = st.date_input(
-            "Transaction date",
-            value=existing_date,
-        )
-
-        submitted = st.form_submit_button(
-            "Save changes",
-            type="primary",
-            use_container_width=True,
-        )
-
-    if not submitted:
-        return
-
-    if not category.strip():
-        st.error("Category cannot be empty")
-        return
-
-    try:
-        update_transaction(
-            transaction_id,
-            {
-                "amount": amount,
-                "transaction_type": transaction_type,
-                "category": category.strip(),
-                "description": description.strip(),
-                "transaction_date": (
-                    transaction_date.isoformat()
-                ),
-            },
-        )
-    except ApiClientError as error:
-        show_error(error)
-        return
-
-    st.success("Transaction updated")
-    st.rerun()
-
-
-@st.dialog("Delete transaction")
-def delete_transaction_dialog(
-    transaction: dict[str, object],
-) -> None:
-    """Confirm transaction deletion"""
-    st.warning(
-        "This action permanently deletes the transaction"
-    )
-
-    st.write(
-        f"**{transaction['category']}** — "
-        f"{format_currency(float(transaction['amount']))}"
-    )
-
-    cancel_column, delete_column = st.columns(2)
-
-    if cancel_column.button(
-        "Cancel",
-        use_container_width=True,
-    ):
-        st.rerun()
-
-    if delete_column.button(
-        "Delete",
-        type="primary",
-        use_container_width=True,
-    ):
-        try:
-            delete_transaction(
-                int(transaction["transaction_id"])
-            )
-        except ApiClientError as error:
-            show_error(error)
-            return
-
-        st.success("Transaction deleted")
-        st.rerun()
 
 
 def show_dashboard() -> None:
@@ -404,10 +281,6 @@ def show_add_transaction() -> None:
     if not submitted:
         return
 
-    if transaction_type is None:
-        st.error("Choose a transaction type")
-        return
-
     if not category.strip():
         st.error("Category cannot be empty")
         return
@@ -435,11 +308,11 @@ def show_add_transaction() -> None:
 
 
 def show_transactions() -> None:
-    """Display transaction management"""
+    """Display transaction history"""
     st.title("Transactions")
     st.markdown(
         '<p class="page-subtitle">'
-        "Search, review, edit, and delete transactions"
+        "Search and review your transaction history"
         "</p>",
         unsafe_allow_html=True,
     )
@@ -517,49 +390,6 @@ def show_transactions() -> None:
             ),
         },
     )
-
-    selected_id = st.selectbox(
-        "Select transaction",
-        options=[
-            int(transaction["transaction_id"])
-            for transaction in transactions
-        ],
-        format_func=lambda transaction_id: next(
-            (
-                f"#{transaction_id} · "
-                f"{transaction['category']} · "
-                f"{format_currency(float(transaction['amount']))}"
-            )
-            for transaction in transactions
-            if int(transaction["transaction_id"])
-            == transaction_id
-        ),
-    )
-
-    selected_transaction = next(
-        transaction
-        for transaction in transactions
-        if int(transaction["transaction_id"])
-        == selected_id
-    )
-
-    edit_column, delete_column = st.columns(2)
-
-    if edit_column.button(
-        "Edit transaction",
-        use_container_width=True,
-    ):
-        edit_transaction_dialog(
-            selected_transaction
-        )
-
-    if delete_column.button(
-        "Delete transaction",
-        use_container_width=True,
-    ):
-        delete_transaction_dialog(
-            selected_transaction
-        )
 
 
 def show_budgets() -> None:
@@ -760,6 +590,7 @@ def show_monthly_report() -> None:
                 ),
             },
         )
+
 
 def main() -> None:
     """Run the Streamlit application"""
