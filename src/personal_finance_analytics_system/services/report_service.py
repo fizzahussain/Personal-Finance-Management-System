@@ -4,6 +4,10 @@ from calendar import monthrange
 from datetime import date, timedelta
 from io import StringIO
 
+from personal_finance_analytics_system.cache import (
+    TtlCache,
+    application_cache,
+)
 from personal_finance_analytics_system.report_manager import (
     ReportManager,
 )
@@ -20,20 +24,38 @@ class ReportService:
         self,
         report_manager: ReportManager,
         transaction_service: TransactionService,
+        cache: TtlCache = application_cache,
     ) -> None:
         self.report_manager = report_manager
         self.transaction_service = transaction_service
+        self.cache = cache
+
+    @property
+    def cache_namespace(self) -> str:
+        """Return the current user's cache namespace"""
+        return self.transaction_service.cache_namespace
 
     def get_monthly_report(
         self,
         month: str,
     ) -> dict[str, object]:
         """Return a monthly financial report"""
+        cache_key = (
+            self.cache_namespace,
+            "monthly-report",
+            month,
+        )
+
+        cached_report = self.cache.get(cache_key)
+
+        if cached_report is not None:
+            return cached_report
+
         transactions = (
             self.transaction_service.list_transactions()
         )
 
-        return {
+        report: dict[str, object] = {
             "month": month,
             "income": self.report_manager.get_monthly_income(
                 transactions,
@@ -63,6 +85,13 @@ class ReportService:
             ),
         }
 
+        self.cache.set(
+            cache_key,
+            report,
+        )
+
+        return report
+
     def get_date_range_report(
         self,
         start_date: date,
@@ -81,6 +110,18 @@ class ReportService:
                 f"End date cannot be later than "
                 f"{latest_end_date.isoformat()}"
             )
+
+        cache_key = (
+            self.cache_namespace,
+            "date-range-report",
+            start_date.isoformat(),
+            end_date.isoformat(),
+        )
+
+        cached_report = self.cache.get(cache_key)
+
+        if cached_report is not None:
+            return cached_report
 
         transactions = (
             self.transaction_service.list_transactions()
@@ -128,7 +169,7 @@ class ReportService:
                 + transaction.amount
             )
 
-        return {
+        report: dict[str, object] = {
             "start_date": start_date,
             "end_date": end_date,
             "income": income,
@@ -137,6 +178,13 @@ class ReportService:
             "savings_rate": savings_rate,
             "spending_by_category": spending_by_category,
         }
+
+        self.cache.set(
+            cache_key,
+            report,
+        )
+
+        return report
 
     @staticmethod
     def _transaction_date(
@@ -228,6 +276,14 @@ class ReportService:
             "spending_by_category"
         ]
 
+        if not isinstance(
+            spending_by_category,
+            dict,
+        ):
+            raise ValueError(
+                "Report category data is invalid"
+            )
+
         for category, amount in spending_by_category.items():
             writer.writerow(
                 [
@@ -237,7 +293,6 @@ class ReportService:
             )
 
         return output.getvalue()
-
 
     def export_date_range_report_json(
         self,
@@ -250,9 +305,22 @@ class ReportService:
             end_date,
         )
 
+        report_start_date = report["start_date"]
+        report_end_date = report["end_date"]
+
+        if not isinstance(report_start_date, date):
+            raise ValueError(
+                "Report start date is invalid"
+            )
+
+        if not isinstance(report_end_date, date):
+            raise ValueError(
+                "Report end date is invalid"
+            )
+
         serializable_report = {
-            "start_date": report["start_date"].isoformat(),
-            "end_date": report["end_date"].isoformat(),
+            "start_date": report_start_date.isoformat(),
+            "end_date": report_end_date.isoformat(),
             "income": report["income"],
             "expenses": report["expenses"],
             "balance": report["balance"],

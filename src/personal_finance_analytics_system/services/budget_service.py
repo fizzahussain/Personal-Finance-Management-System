@@ -3,6 +3,10 @@ from typing import Protocol
 from personal_finance_analytics_system.budget_manager import (
     BudgetManager,
 )
+from personal_finance_analytics_system.cache import (
+    TtlCache,
+    application_cache,
+)
 from personal_finance_analytics_system.services.transaction_service import (
     TransactionService,
 )
@@ -29,13 +33,20 @@ class BudgetService:
         manager: BudgetManager,
         storage: BudgetStorageProtocol,
         transaction_service: TransactionService,
+        cache: TtlCache = application_cache,
     ) -> None:
         self.manager = manager
         self.storage = storage
         self.transaction_service = transaction_service
+        self.cache = cache
 
         saved_budgets = self.storage.load_budgets()
         self.manager.load_budgets(saved_budgets)
+
+    @property
+    def cache_namespace(self) -> str:
+        """Return the current user's cache namespace"""
+        return self.transaction_service.cache_namespace
 
     def list_budgets(self) -> dict[str, float]:
         """Return all category budgets"""
@@ -58,12 +69,28 @@ class BudgetService:
             self.manager.get_all_budgets()
         )
 
+        self.cache.delete_prefix(
+            (self.cache_namespace,)
+        )
+
         return amount
 
     def get_budget_statuses(
         self,
     ) -> list[dict[str, float | str]]:
         """Return status details for all budgets"""
+        cache_key = (
+            self.cache_namespace,
+            "budget-statuses",
+        )
+
+        cached_statuses = self.cache.get(
+            cache_key
+        )
+
+        if cached_statuses is not None:
+            return cached_statuses
+
         transactions = (
             self.transaction_service.list_transactions()
         )
@@ -109,5 +136,10 @@ class BudgetService:
                     "status": budget_status,
                 }
             )
+
+        self.cache.set(
+            cache_key,
+            statuses,
+        )
 
         return statuses
