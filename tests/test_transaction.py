@@ -43,3 +43,17 @@ def test_invalid_amount() -> None:
             "Food",
             "Lunch",
         )
+
+
+def test_rejects_invalid_user_id() -> None:
+    """Reject a nonpositive transaction user ID"""
+    with pytest.raises(
+        InvalidTransactionError,
+        match="greater than zero",
+    ):
+        Transaction(
+            amount=100,
+            transaction_type="expense",
+            category="Food",
+            user_id=0,
+        )

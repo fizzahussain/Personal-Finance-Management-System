@@ -173,6 +173,7 @@ def test_database_contains_saved_rows(
         rows = connection.execute(
             """
             SELECT
+                user_id,
                 amount,
                 transaction_type,
                 category,
@@ -183,11 +184,135 @@ def test_database_contains_saved_rows(
         ).fetchall()
 
     assert rows == [
-        (
-            300.0,
-            "expense",
-            "Food",
-            "Dinner",
-            "2026-07-04",
+    (
+        1,
+        300.0,
+        "expense",
+        "Food",
+        "Dinner",
+        "2026-07-04",
+    )
+]
+
+
+def test_adds_user_id_column_to_older_database(
+    tmp_path: Path,
+) -> None:
+    """Add the user ID column to an older database"""
+    file_path = tmp_path / "transactions.db"
+
+    with closing(
+        sqlite3.connect(file_path)
+    ) as connection:
+        connection.execute(
+            """
+            CREATE TABLE transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                amount REAL NOT NULL,
+                transaction_type TEXT NOT NULL,
+                category TEXT NOT NULL,
+                description TEXT NOT NULL,
+                transaction_date TEXT NOT NULL DEFAULT ''
+            )
+            """
         )
+
+        connection.commit()
+
+    SqliteStorage(str(file_path))
+
+    with closing(
+        sqlite3.connect(file_path)
+    ) as connection:
+        columns = connection.execute(
+            "PRAGMA table_info(transactions)"
+        ).fetchall()
+
+    column_names = [
+        column[1]
+        for column in columns
     ]
+
+    assert "user_id" in column_names
+
+
+def test_loads_only_current_user_transactions(
+    tmp_path: Path,
+) -> None:
+    """Load transactions belonging to one user"""
+    file_path = tmp_path / "transactions.db"
+
+    first_user_storage = SqliteStorage(
+        str(file_path),
+        user_id=1,
+    )
+    second_user_storage = SqliteStorage(
+        str(file_path),
+        user_id=2,
+    )
+
+    first_user_storage.insert_transaction(
+        Transaction(
+            amount=1000,
+            transaction_type="income",
+            category="Salary",
+            transaction_date="2026-07-01",
+        )
+    )
+
+    second_user_storage.insert_transaction(
+        Transaction(
+            amount=200,
+            transaction_type="expense",
+            category="Food",
+            transaction_date="2026-07-02",
+        )
+    )
+
+    first_user_transactions = (
+        first_user_storage.load_transactions()
+    )
+    second_user_transactions = (
+        second_user_storage.load_transactions()
+    )
+
+    assert len(first_user_transactions) == 1
+    assert first_user_transactions[0].amount == 1000
+    assert first_user_transactions[0].user_id == 1
+
+    assert len(second_user_transactions) == 1
+    assert second_user_transactions[0].amount == 200
+    assert second_user_transactions[0].user_id == 2
+
+
+def test_cannot_get_another_users_transaction(
+    tmp_path: Path,
+) -> None:
+    """Prevent access to another user's transaction"""
+    file_path = tmp_path / "transactions.db"
+
+    first_user_storage = SqliteStorage(
+        str(file_path),
+        user_id=1,
+    )
+    second_user_storage = SqliteStorage(
+        str(file_path),
+        user_id=2,
+    )
+
+    transaction = first_user_storage.insert_transaction(
+        Transaction(
+            amount=100,
+            transaction_type="expense",
+            category="Food",
+            transaction_date="2026-07-01",
+        )
+    )
+
+    assert transaction.transaction_id is not None
+    assert (
+        second_user_storage.get_transaction(
+            transaction.transaction_id
+        )
+        is None
+    )

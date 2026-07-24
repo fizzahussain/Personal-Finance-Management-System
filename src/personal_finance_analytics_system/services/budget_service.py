@@ -1,12 +1,24 @@
+from typing import Protocol
+
 from personal_finance_analytics_system.budget_manager import (
     BudgetManager,
-)
-from personal_finance_analytics_system.budget_storage import (
-    BudgetStorage,
 )
 from personal_finance_analytics_system.services.transaction_service import (
     TransactionService,
 )
+
+
+class BudgetStorageProtocol(Protocol):
+    """Define category budget storage operations"""
+
+    def load_budgets(self) -> dict[str, float]:
+        """Return stored budgets"""
+
+    def save_budgets(
+        self,
+        budgets: dict[str, float],
+    ) -> None:
+        """Save category budgets"""
 
 
 class BudgetService:
@@ -15,7 +27,7 @@ class BudgetService:
     def __init__(
         self,
         manager: BudgetManager,
-        storage: BudgetStorage,
+        storage: BudgetStorageProtocol,
         transaction_service: TransactionService,
     ) -> None:
         self.manager = manager

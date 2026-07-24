@@ -21,8 +21,10 @@ class Transaction:
         description: str = "",
         transaction_date: str | None = None,
         transaction_id: int | None = None,
+        user_id: int = 1,
     ) -> None:
         self.transaction_id = transaction_id
+        self.user_id = self.validate_user_id(user_id)
         self.amount = self.validate_amount(amount)
         self.transaction_type = self.validate_type(
             transaction_type
@@ -32,6 +34,23 @@ class Transaction:
         self.transaction_date = self.validate_date(
             transaction_date
         )
+
+    @staticmethod
+    def validate_user_id(user_id: int) -> int:
+        """Validate and return the user ID"""
+        try:
+            valid_user_id = int(user_id)
+        except (TypeError, ValueError) as error:
+            raise InvalidTransactionError(
+                "User ID must be a valid integer"
+            ) from error
+
+        if valid_user_id <= 0:
+            raise InvalidTransactionError(
+                "User ID must be greater than zero"
+            )
+
+        return valid_user_id
 
     @staticmethod
     def validate_amount(amount: float) -> float:
