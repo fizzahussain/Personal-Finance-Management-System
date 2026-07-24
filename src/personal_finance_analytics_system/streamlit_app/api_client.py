@@ -118,11 +118,51 @@ def get_budget_statuses() -> list[dict[str, Any]]:
     )
 
 
-def get_monthly_report(
-    month: str,
+def get_date_range_report(
+    start_date: str,
+    end_date: str,
 ) -> dict[str, Any]:
-    """Return a monthly report"""
+    """Return a report for a date range"""
     return request(
         "GET",
-        f"/reports/monthly/{month}",
+        "/reports",
+        params={
+            "start_date": start_date,
+            "end_date": end_date,
+        },
     )
+
+
+def download_report(
+    start_date: str,
+    end_date: str,
+    report_format: str,
+) -> bytes:
+    """Download a report file"""
+    try:
+        response = httpx.get(
+            f"{API_BASE_URL}/reports/download",
+            params={
+                "start_date": start_date,
+                "end_date": end_date,
+                "format": report_format,
+            },
+            timeout=REQUEST_TIMEOUT,
+        )
+    except httpx.RequestError as error:
+        raise ApiClientError(
+            "Unable to connect to the finance API"
+        ) from error
+
+    if response.status_code >= 400:
+        try:
+            detail = response.json().get(
+                "detail",
+                "The report download failed",
+            )
+        except ValueError:
+            detail = "The report download failed"
+
+        raise ApiClientError(str(detail))
+
+    return response.content

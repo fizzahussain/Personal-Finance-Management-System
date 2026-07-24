@@ -90,3 +90,14 @@ class MonthlyReportResponse(BaseModel):
     balance: float
     savings_rate: float
     spending_by_category: dict[str, float]
+
+class DateRangeReportResponse(BaseModel):
+    """Represent a financial report for a date range"""
+
+    start_date: date
+    end_date: date
+    income: float
+    expenses: float
+    balance: float
+    savings_rate: float
+    spending_by_category: dict[str, float]

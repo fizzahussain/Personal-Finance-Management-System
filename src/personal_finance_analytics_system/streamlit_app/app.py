@@ -6,9 +6,10 @@ import streamlit as st
 from personal_finance_analytics_system.streamlit_app.api_client import (
     ApiClientError,
     create_transaction,
+    download_report,
     get_budget_statuses,
     get_budgets,
-    get_monthly_report,
+    get_date_range_report,
     get_summary,
     get_transactions,
     set_budget,
@@ -500,25 +501,60 @@ def show_budgets() -> None:
             st.divider()
 
 
-def show_monthly_report() -> None:
-    """Display monthly financial analytics"""
-    st.title("Monthly report")
+def show_reports() -> None:
+    """Display date-range financial analytics"""
+    st.title("Financial reports")
     st.markdown(
         '<p class="page-subtitle">'
-        "Review income, expenses, savings, and spending"
+        "Review and download historical financial data"
         "</p>",
         unsafe_allow_html=True,
     )
 
-    selected_date = st.date_input(
-        "Select month",
-        value=date.today().replace(day=1),
+    latest_end_date = date.today().replace(day=1)
+
+    if latest_end_date.month == 1:
+        latest_end_date = latest_end_date.replace(
+            year=latest_end_date.year - 1,
+            month=12,
+        )
+    else:
+        latest_end_date = latest_end_date.replace(
+            month=latest_end_date.month - 1,
+        )
+
+    latest_end_date = latest_end_date.replace(
+        day=min(
+            date.today().day - 1,
+            28,
+        )
     )
 
-    month = selected_date.strftime("%Y-%m")
+    start_column, end_column = st.columns(2)
+
+    start_date = start_column.date_input(
+        "Start date",
+        value=latest_end_date.replace(day=1),
+        max_value=latest_end_date,
+    )
+
+    end_date = end_column.date_input(
+        "End date",
+        value=latest_end_date,
+        max_value=latest_end_date,
+    )
+
+    if start_date > end_date:
+        st.error(
+            "Start date cannot be after end date"
+        )
+        return
 
     try:
-        report = get_monthly_report(month)
+        report = get_date_range_report(
+            start_date.isoformat(),
+            end_date.isoformat(),
+        )
     except ApiClientError as error:
         show_error(error)
         return
@@ -549,47 +585,93 @@ def show_monthly_report() -> None:
 
     spending = report["spending_by_category"]
 
-    if not spending:
-        st.info(
-            "No expense transactions found for this month"
+    if spending:
+        spending_frame = pd.DataFrame(
+            {
+                "Category": spending.keys(),
+                "Amount": spending.values(),
+            }
         )
+
+        chart_column, table_column = st.columns(
+            [1.4, 0.6],
+            gap="large",
+        )
+
+        with chart_column:
+            st.subheader("Spending by category")
+
+            st.bar_chart(
+                spending_frame,
+                x="Category",
+                y="Amount",
+            )
+
+        with table_column:
+            st.subheader("Category totals")
+
+            st.dataframe(
+                spending_frame,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "Amount": (
+                        st.column_config.NumberColumn(
+                            "Amount",
+                            format="$%.2f",
+                        )
+                    ),
+                },
+            )
+    else:
+        st.info(
+            "No expense transactions were found "
+            "for this date range"
+        )
+
+    st.subheader("Download report")
+
+    try:
+        csv_content = download_report(
+            start_date.isoformat(),
+            end_date.isoformat(),
+            "csv",
+        )
+
+        json_content = download_report(
+            start_date.isoformat(),
+            end_date.isoformat(),
+            "json",
+        )
+    except ApiClientError as error:
+        show_error(error)
         return
 
-    spending_frame = pd.DataFrame(
-        {
-            "Category": spending.keys(),
-            "Amount": spending.values(),
-        }
+    csv_column, json_column = st.columns(2)
+
+    csv_column.download_button(
+        "Download CSV",
+        data=csv_content,
+        file_name=(
+            f"financial-report-"
+            f"{start_date.isoformat()}-"
+            f"{end_date.isoformat()}.csv"
+        ),
+        mime="text/csv",
+        use_container_width=True,
     )
 
-    chart_column, table_column = st.columns(
-        [1.4, 0.6],
-        gap="large",
+    json_column.download_button(
+        "Download JSON",
+        data=json_content,
+        file_name=(
+            f"financial-report-"
+            f"{start_date.isoformat()}-"
+            f"{end_date.isoformat()}.json"
+        ),
+        mime="application/json",
+        use_container_width=True,
     )
-
-    with chart_column:
-        st.subheader("Spending by category")
-
-        st.bar_chart(
-            spending_frame,
-            x="Category",
-            y="Amount",
-        )
-
-    with table_column:
-        st.subheader("Category totals")
-
-        st.dataframe(
-            spending_frame,
-            hide_index=True,
-            use_container_width=True,
-            column_config={
-                "Amount": st.column_config.NumberColumn(
-                    "Amount",
-                    format="$%.2f",
-                ),
-            },
-        )
 
 
 def main() -> None:
@@ -606,7 +688,7 @@ def main() -> None:
                 "Add transaction",
                 "Transactions",
                 "Budgets",
-                "Monthly report",
+                "Reports",
             ],
         )
 
@@ -619,7 +701,7 @@ def main() -> None:
     elif page == "Budgets":
         show_budgets()
     else:
-        show_monthly_report()
+        show_reports()
 
 
 if __name__ == "__main__":

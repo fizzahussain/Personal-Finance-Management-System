@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 from personal_finance_analytics_system.report_manager import (
@@ -120,3 +121,21 @@ def test_rejects_invalid_report_month(
         assert str(error)
     else:
         raise AssertionError("ValueError was not raised")
+
+def test_get_latest_report_end_date() -> None:
+    """Return the latest permitted report date"""
+    result = ReportService.get_latest_report_end_date(
+        date(2026, 7, 24)
+    )
+
+    assert result == date(2026, 6, 23)
+
+
+def test_get_latest_report_end_date_in_january() -> None:
+    """Return a permitted date in the previous December"""
+    result = ReportService.get_latest_report_end_date(
+        date(2026, 1, 10)
+    )
+
+    assert result == date(2025, 12, 9)
+
