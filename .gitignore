@@ -68,3 +68,4 @@ tempCodeRunnerFile.py
 data/*.json
 data/*.csv
 data/*.db
+.env
