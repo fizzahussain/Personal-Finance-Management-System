@@ -9,9 +9,12 @@ from personal_finance_analytics_system.streamlit_app.api_client import (
     download_report,
     get_budget_statuses,
     get_budgets,
+    get_current_user,
     get_date_range_report,
     get_summary,
     get_transactions,
+    login_user,
+    register_user,
     set_budget,
 )
 
@@ -83,6 +86,150 @@ def format_currency(amount: float) -> str:
     return f"${amount:,.2f}"
 
 
+def initialize_session() -> None:
+    """Initialize authentication session values"""
+    if "access_token" not in st.session_state:
+        st.session_state.access_token = None
+
+    if "user_email" not in st.session_state:
+        st.session_state.user_email = None
+
+
+def get_access_token() -> str:
+    """Return the current access token"""
+    access_token = st.session_state.get(
+        "access_token"
+    )
+
+    if not access_token:
+        raise ApiClientError(
+            "Authentication is required"
+        )
+
+    return str(access_token)
+
+
+def login(
+    email: str,
+    password: str,
+) -> None:
+    """Authenticate and store the user session"""
+    token_response = login_user(
+        email,
+        password,
+    )
+
+    access_token = str(
+        token_response["access_token"]
+    )
+
+    user = get_current_user(access_token)
+
+    st.session_state.access_token = access_token
+    st.session_state.user_email = str(
+        user["email"]
+    )
+
+
+def logout() -> None:
+    """Clear the authenticated session"""
+    st.session_state.access_token = None
+    st.session_state.user_email = None
+    st.rerun()
+
+
+def show_authentication() -> None:
+    """Display login and registration forms"""
+    st.title("FinanceFlow")
+    st.markdown(
+        '<p class="page-subtitle">'
+        "Sign in to manage your personal finances"
+        "</p>",
+        unsafe_allow_html=True,
+    )
+
+    login_tab, register_tab = st.tabs(
+        [
+            "Login",
+            "Register",
+        ]
+    )
+
+    with login_tab:
+        with st.form("login_form"):
+            email = st.text_input(
+                "Email",
+                key="login_email",
+            )
+
+            password = st.text_input(
+                "Password",
+                type="password",
+                key="login_password",
+            )
+
+            submitted = st.form_submit_button(
+                "Login",
+                type="primary",
+                use_container_width=True,
+            )
+
+        if submitted:
+            try:
+                login(
+                    email.strip(),
+                    password,
+                )
+            except ApiClientError as error:
+                show_error(error)
+            else:
+                st.rerun()
+
+    with register_tab:
+        with st.form("register_form"):
+            email = st.text_input(
+                "Email",
+                key="register_email",
+            )
+
+            password = st.text_input(
+                "Password",
+                type="password",
+                key="register_password",
+            )
+
+            confirmed_password = st.text_input(
+                "Confirm password",
+                type="password",
+            )
+
+            submitted = st.form_submit_button(
+                "Create account",
+                type="primary",
+                use_container_width=True,
+            )
+
+        if submitted:
+            if password != confirmed_password:
+                st.error("Passwords do not match")
+                return
+
+            try:
+                register_user(
+                    email.strip(),
+                    password,
+                )
+
+                login(
+                    email.strip(),
+                    password,
+                )
+            except ApiClientError as error:
+                show_error(error)
+            else:
+                st.rerun()
+
+
 def show_dashboard() -> None:
     """Display the financial dashboard"""
     st.title("Dashboard")
@@ -94,9 +241,17 @@ def show_dashboard() -> None:
     )
 
     try:
-        summary = get_summary()
-        transactions = get_transactions()
-        statuses = get_budget_statuses()
+        access_token = get_access_token()
+
+        summary = get_summary(access_token)
+
+        transactions = get_transactions(
+            access_token=access_token
+        )
+
+        statuses = get_budget_statuses(
+            access_token
+        )
     except ApiClientError as error:
         show_error(error)
         return
@@ -296,7 +451,8 @@ def show_add_transaction() -> None:
                 "transaction_date": (
                     transaction_date.isoformat()
                 ),
-            }
+            },
+            access_token=get_access_token(),
         )
     except ApiClientError as error:
         show_error(error)
@@ -363,7 +519,8 @@ def show_transactions() -> None:
 
     try:
         transactions = get_transactions(
-            params=params or None
+            params=params or None,
+            access_token=get_access_token(),
         )
     except ApiClientError as error:
         show_error(error)
@@ -437,6 +594,7 @@ def show_budgets() -> None:
                     set_budget(
                         category.strip(),
                         amount,
+                        access_token=get_access_token(),
                     )
                 except ApiClientError as error:
                     show_error(error)
@@ -450,8 +608,15 @@ def show_budgets() -> None:
         st.subheader("Budget overview")
 
         try:
-            budgets = get_budgets()
-            statuses = get_budget_statuses()
+            access_token = get_access_token()
+
+            budgets = get_budgets(
+                access_token
+            )
+
+            statuses = get_budget_statuses(
+                access_token
+            )
         except ApiClientError as error:
             show_error(error)
             return
@@ -554,6 +719,7 @@ def show_reports() -> None:
         report = get_date_range_report(
             start_date.isoformat(),
             end_date.isoformat(),
+            access_token=get_access_token(),
         )
     except ApiClientError as error:
         show_error(error)
@@ -632,16 +798,20 @@ def show_reports() -> None:
     st.subheader("Download report")
 
     try:
+        access_token = get_access_token()
+
         csv_content = download_report(
             start_date.isoformat(),
             end_date.isoformat(),
             "csv",
+            access_token=access_token,
         )
 
         json_content = download_report(
             start_date.isoformat(),
             end_date.isoformat(),
             "json",
+            access_token=access_token,
         )
     except ApiClientError as error:
         show_error(error)
@@ -676,9 +846,27 @@ def show_reports() -> None:
 
 def main() -> None:
     """Run the Streamlit application"""
+    initialize_session()
+
+    if not st.session_state.access_token:
+        show_authentication()
+        return
+
     with st.sidebar:
         st.markdown("## FinanceFlow")
         st.caption("Personal finance analytics")
+
+        st.write(
+            f"Signed in as "
+            f"**{st.session_state.user_email}**"
+        )
+
+        if st.button(
+            "Logout",
+            use_container_width=True,
+        ):
+            logout()
+
         st.divider()
 
         page = st.radio(

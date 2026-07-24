@@ -3,6 +3,9 @@ from fastapi import FastAPI
 from personal_finance_analytics_system.api.error_handlers import (
     register_error_handlers,
 )
+from personal_finance_analytics_system.api.routers.auth import (
+    router as auth_router,
+)
 from personal_finance_analytics_system.api.routers.budgets import (
     router as budgets_router,
 )
@@ -31,6 +34,10 @@ register_error_handlers(app)
 
 app.include_router(
     system_router,
+    prefix=API_PREFIX,
+)
+app.include_router(
+    auth_router,
     prefix=API_PREFIX,
 )
 app.include_router(
