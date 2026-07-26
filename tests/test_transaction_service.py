@@ -42,6 +42,7 @@ def test_create_and_list_transactions(
         == "2026-07-23"
     )
 
+
 def test_get_transaction_summary(
     tmp_path: Path,
 ) -> None:
@@ -89,6 +90,7 @@ def test_get_transaction_summary(
         "transaction_count": 3,
     }
 
+
 def test_get_empty_transaction_summary(
     tmp_path: Path,
 ) -> None:
@@ -105,6 +107,7 @@ def test_get_empty_transaction_summary(
         "balance": 0,
         "transaction_count": 0,
     }
+
 
 def create_service_with_transactions(
     tmp_path: Path,
@@ -142,6 +145,7 @@ def create_service_with_transactions(
         service.create_transaction(transaction)
 
     return service
+
 
 def test_filter_transactions_by_category(
     tmp_path: Path,
@@ -251,101 +255,7 @@ def test_get_transaction_by_id(
     assert transaction.amount == 500
 
 
-def test_delete_transaction(
-    tmp_path: Path,
-) -> None:
-    """Delete one stored transaction"""
-    storage = SqliteStorage(
-        str(tmp_path / "transactions.db")
-    )
-    service = TransactionService(storage)
-
-    created = service.create_transaction(
-        Transaction(
-            amount=500,
-            transaction_type="expense",
-            category="Food",
-            description="Groceries",
-            transaction_date="2026-07-23",
-        )
-    )
-
-    assert created.transaction_id is not None
-
-    deleted = service.delete_transaction(
-        created.transaction_id
-    )
-
-    assert deleted is True
-    assert (
-        service.get_transaction(
-            created.transaction_id
-        )
-        is None
-    )
-
-
-def test_delete_missing_transaction(
-    tmp_path: Path,
-) -> None:
-    """Return false for a missing transaction"""
-    storage = SqliteStorage(
-        str(tmp_path / "transactions.db")
-    )
-    service = TransactionService(storage)
-
-    assert service.delete_transaction(999) is False
-
-
-def test_update_transaction(
-    tmp_path: Path,
-) -> None:
-    """Update one stored transaction"""
-    storage = SqliteStorage(
-        str(tmp_path / "transactions.db")
-    )
-    service = TransactionService(storage)
-
-    created = service.create_transaction(
-        Transaction(
-            amount=500,
-            transaction_type="expense",
-            category="Food",
-            description="Groceries",
-            transaction_date="2026-07-23",
-        )
-    )
-
-    assert created.transaction_id is not None
-
-    updated = service.update_transaction(
-        created.transaction_id,
-        Transaction(
-            amount=750,
-            transaction_type="expense",
-            category="Food",
-            description="Groceries and supplies",
-            transaction_date="2026-07-24",
-        ),
-    )
-
-    assert updated is not None
-    assert updated.transaction_id == created.transaction_id
-    assert updated.amount == 750
-    assert updated.category == "Food"
-    assert updated.description == "Groceries and supplies"
-    assert updated.transaction_date == "2026-07-24"
-
-    stored = service.get_transaction(
-        created.transaction_id
-    )
-
-    assert stored is not None
-    assert stored.amount == 750
-    assert stored.description == "Groceries and supplies"
-
-
-def test_update_missing_transaction(
+def test_get_missing_transaction_by_id(
     tmp_path: Path,
 ) -> None:
     """Return none for a missing transaction"""
@@ -354,15 +264,6 @@ def test_update_missing_transaction(
     )
     service = TransactionService(storage)
 
-    updated = service.update_transaction(
-        999,
-        Transaction(
-            amount=500,
-            transaction_type="expense",
-            category="Food",
-            description="Groceries",
-            transaction_date="2026-07-23",
-        ),
-    )
+    transaction = service.get_transaction(999)
 
-    assert updated is None
+    assert transaction is None

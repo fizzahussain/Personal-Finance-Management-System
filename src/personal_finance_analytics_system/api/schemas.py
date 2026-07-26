@@ -4,6 +4,68 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 
+class UserRegister(BaseModel):
+    """Validate user registration input"""
+
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(
+        cls,
+        email: str,
+    ) -> str:
+        """Validate and normalize the email"""
+        cleaned_email = email.strip().casefold()
+
+        if (
+            "@" not in cleaned_email
+            or cleaned_email.startswith("@")
+            or cleaned_email.endswith("@")
+        ):
+            raise ValueError("Email address is invalid")
+
+        return cleaned_email
+
+
+class UserLogin(BaseModel):
+    """Validate user login input"""
+
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(
+        cls,
+        email: str,
+    ) -> str:
+        """Normalize the email"""
+        return email.strip().casefold()
+
+
+class UserResponse(BaseModel):
+    """Represent a registered user"""
+
+    user_id: int
+    email: str
+
+
+class CurrentUserResponse(BaseModel):
+    """Represent the authenticated user"""
+
+    user_id: int
+    email: str
+
+
+class TokenResponse(BaseModel):
+    """Represent an authentication token"""
+
+    access_token: str
+    token_type: str = "bearer"
+
+
 class TransactionCreate(BaseModel):
     """Validate transaction input"""
 
@@ -36,8 +98,6 @@ class TransactionCreate(BaseModel):
         """Clean the description"""
         return description.strip()
 
-class TransactionUpdate(TransactionCreate):
-    """Validate transaction updates"""
 
 class TransactionResponse(BaseModel):
     """Represent transaction output"""
@@ -87,6 +147,18 @@ class MonthlyReportResponse(BaseModel):
     """Represent a monthly financial report"""
 
     month: str
+    income: float
+    expenses: float
+    balance: float
+    savings_rate: float
+    spending_by_category: dict[str, float]
+
+
+class DateRangeReportResponse(BaseModel):
+    """Represent a financial report for a date range"""
+
+    start_date: date
+    end_date: date
     income: float
     expenses: float
     balance: float

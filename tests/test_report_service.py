@@ -1,4 +1,7 @@
+from datetime import date
 from pathlib import Path
+
+import pytest
 
 from personal_finance_analytics_system.report_manager import (
     ReportManager,
@@ -114,9 +117,23 @@ def test_rejects_invalid_report_month(
     """Reject an invalid month"""
     service = create_report_service(tmp_path)
 
-    try:
+    with pytest.raises(ValueError):
         service.get_monthly_report("July 2026")
-    except ValueError as error:
-        assert str(error)
-    else:
-        raise AssertionError("ValueError was not raised")
+
+
+def test_get_latest_report_end_date() -> None:
+    """Return today as the latest report end date"""
+    result = ReportService.get_latest_report_end_date(
+        date(2026, 7, 24)
+    )
+
+    assert result == date(2026, 7, 24)
+
+
+def test_get_latest_report_end_date_in_january() -> None:
+    """Return today during January"""
+    result = ReportService.get_latest_report_end_date(
+        date(2026, 1, 10)
+    )
+
+    assert result == date(2026, 1, 10)

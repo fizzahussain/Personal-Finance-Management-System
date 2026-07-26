@@ -71,7 +71,7 @@ def test_list_budgets_is_initially_empty(
     client: TestClient,
 ) -> None:
     """Return an empty budget list"""
-    response = client.get("/budgets")
+    response = client.get("/api/v1/budgets")
 
     assert response.status_code == 200
     assert response.json() == []
@@ -82,7 +82,7 @@ def test_create_category_budget(
 ) -> None:
     """Create a category budget"""
     response = client.put(
-        "/budgets/categories/Food",
+        "/api/v1/budgets/categories/Food",
         json={
             "amount": 500,
         },
@@ -100,13 +100,13 @@ def test_created_budget_is_returned(
 ) -> None:
     """Return a previously created budget"""
     client.put(
-        "/budgets/categories/Food",
+        "/api/v1/budgets/categories/Food",
         json={
             "amount": 500,
         },
     )
 
-    response = client.get("/budgets")
+    response = client.get("/api/v1/budgets")
 
     assert response.status_code == 200
     assert response.json() == [
@@ -122,14 +122,14 @@ def test_update_category_budget(
 ) -> None:
     """Update an existing category budget"""
     client.put(
-        "/budgets/categories/Food",
+        "/api/v1/budgets/categories/Food",
         json={
             "amount": 500,
         },
     )
 
     response = client.put(
-        "/budgets/categories/Food",
+        "/api/v1/budgets/categories/Food",
         json={
             "amount": 750,
         },
@@ -147,7 +147,7 @@ def test_rejects_non_positive_budget(
 ) -> None:
     """Reject a non-positive budget"""
     response = client.put(
-        "/budgets/categories/Food",
+        "/api/v1/budgets/categories/Food",
         json={
             "amount": 0,
         },
@@ -160,7 +160,7 @@ def test_get_budget_statuses(
 ) -> None:
     """Return category budget analytics"""
     client.put(
-        "/budgets/categories/Food",
+        "/api/v1/budgets/categories/Food",
         json={
             "amount": 500,
         },
@@ -180,7 +180,7 @@ def test_get_budget_statuses(
         )
     )
 
-    response = client.get("/budgets/status")
+    response = client.get("/api/v1/budgets/status")
 
     assert response.status_code == 200
     assert response.json() == [

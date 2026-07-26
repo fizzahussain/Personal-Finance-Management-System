@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 
 import pandas as pd
 import streamlit as st
@@ -6,14 +6,16 @@ import streamlit as st
 from personal_finance_analytics_system.streamlit_app.api_client import (
     ApiClientError,
     create_transaction,
-    delete_transaction,
+    download_report,
     get_budget_statuses,
     get_budgets,
-    get_monthly_report,
+    get_current_user,
+    get_date_range_report,
     get_summary,
     get_transactions,
+    login_user,
+    register_user,
     set_budget,
-    update_transaction,
 )
 
 st.set_page_config(
@@ -84,125 +86,148 @@ def format_currency(amount: float) -> str:
     return f"${amount:,.2f}"
 
 
-@st.dialog("Edit transaction")
-def edit_transaction_dialog(
-    transaction: dict[str, object],
+def initialize_session() -> None:
+    """Initialize authentication session values"""
+    if "access_token" not in st.session_state:
+        st.session_state.access_token = None
+
+    if "user_email" not in st.session_state:
+        st.session_state.user_email = None
+
+
+def get_access_token() -> str:
+    """Return the current access token"""
+    access_token = st.session_state.get(
+        "access_token"
+    )
+
+    if not access_token:
+        raise ApiClientError(
+            "Authentication is required"
+        )
+
+    return str(access_token)
+
+
+def login(
+    email: str,
+    password: str,
 ) -> None:
-    """Edit one transaction"""
-    transaction_id = int(transaction["transaction_id"])
+    """Authenticate and store the user session"""
+    token_response = login_user(
+        email,
+        password,
+    )
 
-    existing_date = datetime.strptime(
-        str(transaction["transaction_date"]),
-        "%Y-%m-%d",
-    ).date()
+    access_token = str(
+        token_response["access_token"]
+    )
 
-    with st.form(
-        f"edit_transaction_{transaction_id}"
-    ):
-        transaction_type = st.selectbox(
-            "Transaction type",
-            ["income", "expense"],
-            index=(
-                0
-                if transaction["transaction_type"]
-                == "income"
-                else 1
-            ),
-        )
+    user = get_current_user(access_token)
 
-        amount = st.number_input(
-            "Amount",
-            min_value=0.01,
-            value=float(transaction["amount"]),
-            step=1.0,
-        )
+    st.session_state.access_token = access_token
+    st.session_state.user_email = str(
+        user["email"]
+    )
 
-        category = st.text_input(
-            "Category",
-            value=str(transaction["category"]),
-        )
 
-        description = st.text_input(
-            "Description",
-            value=str(transaction["description"]),
-        )
-
-        transaction_date = st.date_input(
-            "Transaction date",
-            value=existing_date,
-        )
-
-        submitted = st.form_submit_button(
-            "Save changes",
-            type="primary",
-            use_container_width=True,
-        )
-
-    if not submitted:
-        return
-
-    if not category.strip():
-        st.error("Category cannot be empty")
-        return
-
-    try:
-        update_transaction(
-            transaction_id,
-            {
-                "amount": amount,
-                "transaction_type": transaction_type,
-                "category": category.strip(),
-                "description": description.strip(),
-                "transaction_date": (
-                    transaction_date.isoformat()
-                ),
-            },
-        )
-    except ApiClientError as error:
-        show_error(error)
-        return
-
-    st.success("Transaction updated")
+def logout() -> None:
+    """Clear the authenticated session"""
+    st.session_state.access_token = None
+    st.session_state.user_email = None
     st.rerun()
 
 
-@st.dialog("Delete transaction")
-def delete_transaction_dialog(
-    transaction: dict[str, object],
-) -> None:
-    """Confirm transaction deletion"""
-    st.warning(
-        "This action permanently deletes the transaction"
+def show_authentication() -> None:
+    """Display login and registration forms"""
+    st.title("FinanceFlow")
+    st.markdown(
+        '<p class="page-subtitle">'
+        "Sign in to manage your personal finances"
+        "</p>",
+        unsafe_allow_html=True,
     )
 
-    st.write(
-        f"**{transaction['category']}** — "
-        f"{format_currency(float(transaction['amount']))}"
+    login_tab, register_tab = st.tabs(
+        [
+            "Login",
+            "Register",
+        ]
     )
 
-    cancel_column, delete_column = st.columns(2)
-
-    if cancel_column.button(
-        "Cancel",
-        use_container_width=True,
-    ):
-        st.rerun()
-
-    if delete_column.button(
-        "Delete",
-        type="primary",
-        use_container_width=True,
-    ):
-        try:
-            delete_transaction(
-                int(transaction["transaction_id"])
+    with login_tab:
+        with st.form("login_form"):
+            email = st.text_input(
+                "Email",
+                key="login_email",
             )
-        except ApiClientError as error:
-            show_error(error)
-            return
 
-        st.success("Transaction deleted")
-        st.rerun()
+            password = st.text_input(
+                "Password",
+                type="password",
+                key="login_password",
+            )
+
+            submitted = st.form_submit_button(
+                "Login",
+                type="primary",
+                use_container_width=True,
+            )
+
+        if submitted:
+            try:
+                login(
+                    email.strip(),
+                    password,
+                )
+            except ApiClientError as error:
+                show_error(error)
+            else:
+                st.rerun()
+
+    with register_tab:
+        with st.form("register_form"):
+            email = st.text_input(
+                "Email",
+                key="register_email",
+            )
+
+            password = st.text_input(
+                "Password",
+                type="password",
+                key="register_password",
+            )
+
+            confirmed_password = st.text_input(
+                "Confirm password",
+                type="password",
+            )
+
+            submitted = st.form_submit_button(
+                "Create account",
+                type="primary",
+                use_container_width=True,
+            )
+
+        if submitted:
+            if password != confirmed_password:
+                st.error("Passwords do not match")
+                return
+
+            try:
+                register_user(
+                    email.strip(),
+                    password,
+                )
+
+                login(
+                    email.strip(),
+                    password,
+                )
+            except ApiClientError as error:
+                show_error(error)
+            else:
+                st.rerun()
 
 
 def show_dashboard() -> None:
@@ -216,9 +241,17 @@ def show_dashboard() -> None:
     )
 
     try:
-        summary = get_summary()
-        transactions = get_transactions()
-        statuses = get_budget_statuses()
+        access_token = get_access_token()
+
+        summary = get_summary(access_token)
+
+        transactions = get_transactions(
+            access_token=access_token
+        )
+
+        statuses = get_budget_statuses(
+            access_token
+        )
     except ApiClientError as error:
         show_error(error)
         return
@@ -404,10 +437,6 @@ def show_add_transaction() -> None:
     if not submitted:
         return
 
-    if transaction_type is None:
-        st.error("Choose a transaction type")
-        return
-
     if not category.strip():
         st.error("Category cannot be empty")
         return
@@ -422,7 +451,8 @@ def show_add_transaction() -> None:
                 "transaction_date": (
                     transaction_date.isoformat()
                 ),
-            }
+            },
+            access_token=get_access_token(),
         )
     except ApiClientError as error:
         show_error(error)
@@ -435,11 +465,11 @@ def show_add_transaction() -> None:
 
 
 def show_transactions() -> None:
-    """Display transaction management"""
+    """Display transaction history"""
     st.title("Transactions")
     st.markdown(
         '<p class="page-subtitle">'
-        "Search, review, edit, and delete transactions"
+        "Search and review your transaction history"
         "</p>",
         unsafe_allow_html=True,
     )
@@ -489,7 +519,8 @@ def show_transactions() -> None:
 
     try:
         transactions = get_transactions(
-            params=params or None
+            params=params or None,
+            access_token=get_access_token(),
         )
     except ApiClientError as error:
         show_error(error)
@@ -517,49 +548,6 @@ def show_transactions() -> None:
             ),
         },
     )
-
-    selected_id = st.selectbox(
-        "Select transaction",
-        options=[
-            int(transaction["transaction_id"])
-            for transaction in transactions
-        ],
-        format_func=lambda transaction_id: next(
-            (
-                f"#{transaction_id} · "
-                f"{transaction['category']} · "
-                f"{format_currency(float(transaction['amount']))}"
-            )
-            for transaction in transactions
-            if int(transaction["transaction_id"])
-            == transaction_id
-        ),
-    )
-
-    selected_transaction = next(
-        transaction
-        for transaction in transactions
-        if int(transaction["transaction_id"])
-        == selected_id
-    )
-
-    edit_column, delete_column = st.columns(2)
-
-    if edit_column.button(
-        "Edit transaction",
-        use_container_width=True,
-    ):
-        edit_transaction_dialog(
-            selected_transaction
-        )
-
-    if delete_column.button(
-        "Delete transaction",
-        use_container_width=True,
-    ):
-        delete_transaction_dialog(
-            selected_transaction
-        )
 
 
 def show_budgets() -> None:
@@ -606,6 +594,7 @@ def show_budgets() -> None:
                     set_budget(
                         category.strip(),
                         amount,
+                        access_token=get_access_token(),
                     )
                 except ApiClientError as error:
                     show_error(error)
@@ -619,8 +608,15 @@ def show_budgets() -> None:
         st.subheader("Budget overview")
 
         try:
-            budgets = get_budgets()
-            statuses = get_budget_statuses()
+            access_token = get_access_token()
+
+            budgets = get_budgets(
+                access_token
+            )
+
+            statuses = get_budget_statuses(
+                access_token
+            )
         except ApiClientError as error:
             show_error(error)
             return
@@ -670,25 +666,44 @@ def show_budgets() -> None:
             st.divider()
 
 
-def show_monthly_report() -> None:
-    """Display monthly financial analytics"""
-    st.title("Monthly report")
+def show_reports() -> None:
+    """Display date-range financial analytics"""
+    st.title("Financial reports")
     st.markdown(
         '<p class="page-subtitle">'
-        "Review income, expenses, savings, and spending"
+        "Review and download historical financial data"
         "</p>",
         unsafe_allow_html=True,
     )
 
-    selected_date = st.date_input(
-        "Select month",
-        value=date.today().replace(day=1),
+    latest_end_date = date.today()
+
+    start_column, end_column = st.columns(2)
+
+    start_date = start_column.date_input(
+        "Start date",
+        value=latest_end_date.replace(day=1),
+        max_value=latest_end_date,
     )
 
-    month = selected_date.strftime("%Y-%m")
+    end_date = end_column.date_input(
+        "End date",
+        value=latest_end_date,
+        max_value=latest_end_date,
+    )
+
+    if start_date > end_date:
+        st.error(
+            "Start date cannot be after end date"
+        )
+        return
 
     try:
-        report = get_monthly_report(month)
+        report = get_date_range_report(
+            start_date.isoformat(),
+            end_date.isoformat(),
+            access_token=get_access_token(),
+        )
     except ApiClientError as error:
         show_error(error)
         return
@@ -719,53 +734,122 @@ def show_monthly_report() -> None:
 
     spending = report["spending_by_category"]
 
-    if not spending:
-        st.info(
-            "No expense transactions found for this month"
+    if spending:
+        spending_frame = pd.DataFrame(
+            {
+                "Category": spending.keys(),
+                "Amount": spending.values(),
+            }
         )
+
+        chart_column, table_column = st.columns(
+            [1.4, 0.6],
+            gap="large",
+        )
+
+        with chart_column:
+            st.subheader("Spending by category")
+
+            st.bar_chart(
+                spending_frame,
+                x="Category",
+                y="Amount",
+            )
+
+        with table_column:
+            st.subheader("Category totals")
+
+            st.dataframe(
+                spending_frame,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "Amount": (
+                        st.column_config.NumberColumn(
+                            "Amount",
+                            format="$%.2f",
+                        )
+                    ),
+                },
+            )
+    else:
+        st.info(
+            "No expense transactions were found "
+            "for this date range"
+        )
+
+    st.subheader("Download report")
+
+    try:
+        access_token = get_access_token()
+
+        csv_content = download_report(
+            start_date.isoformat(),
+            end_date.isoformat(),
+            "csv",
+            access_token=access_token,
+        )
+
+        json_content = download_report(
+            start_date.isoformat(),
+            end_date.isoformat(),
+            "json",
+            access_token=access_token,
+        )
+    except ApiClientError as error:
+        show_error(error)
         return
 
-    spending_frame = pd.DataFrame(
-        {
-            "Category": spending.keys(),
-            "Amount": spending.values(),
-        }
+    csv_column, json_column = st.columns(2)
+
+    csv_column.download_button(
+        "Download CSV",
+        data=csv_content,
+        file_name=(
+            f"financial-report-"
+            f"{start_date.isoformat()}-"
+            f"{end_date.isoformat()}.csv"
+        ),
+        mime="text/csv",
+        use_container_width=True,
     )
 
-    chart_column, table_column = st.columns(
-        [1.4, 0.6],
-        gap="large",
+    json_column.download_button(
+        "Download JSON",
+        data=json_content,
+        file_name=(
+            f"financial-report-"
+            f"{start_date.isoformat()}-"
+            f"{end_date.isoformat()}.json"
+        ),
+        mime="application/json",
+        use_container_width=True,
     )
 
-    with chart_column:
-        st.subheader("Spending by category")
-
-        st.bar_chart(
-            spending_frame,
-            x="Category",
-            y="Amount",
-        )
-
-    with table_column:
-        st.subheader("Category totals")
-
-        st.dataframe(
-            spending_frame,
-            hide_index=True,
-            use_container_width=True,
-            column_config={
-                "Amount": st.column_config.NumberColumn(
-                    "Amount",
-                    format="$%.2f",
-                ),
-            },
-        )
 
 def main() -> None:
     """Run the Streamlit application"""
+    initialize_session()
+
+    if not st.session_state.access_token:
+        show_authentication()
+        return
+
     with st.sidebar:
         st.markdown("## FinanceFlow")
         st.caption("Personal finance analytics")
+
+        st.write(
+            f"Signed in as "
+            f"**{st.session_state.user_email}**"
+        )
+
+        if st.button(
+            "Logout",
+            use_container_width=True,
+        ):
+            logout()
+
         st.divider()
 
         page = st.radio(
@@ -775,7 +859,7 @@ def main() -> None:
                 "Add transaction",
                 "Transactions",
                 "Budgets",
-                "Monthly report",
+                "Reports",
             ],
         )
 
@@ -788,7 +872,7 @@ def main() -> None:
     elif page == "Budgets":
         show_budgets()
     else:
-        show_monthly_report()
+        show_reports()
 
 
 if __name__ == "__main__":
