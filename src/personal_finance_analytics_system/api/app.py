@@ -38,7 +38,7 @@ app = FastAPI(
         "Backend API for managing personal finance data, "
         "including transactions, budgets, summaries, and reports"
     ),
-    version="1.0.0",
+    version="1.3.0",
 )
 
 
