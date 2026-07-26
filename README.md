@@ -22,6 +22,12 @@ A personal finance application with a FastAPI backend, Streamlit interface, comm
 - Validate input and handle storage, authentication, and API errors
 - Use Streamlit for the authenticated web interface
 
+## Report date rule
+
+Reports may be generated through the current date.
+
+Future end dates are rejected with HTTP 422.
+
 ## Requirements
 
 - Python 3.13 or newer

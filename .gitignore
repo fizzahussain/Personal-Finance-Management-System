@@ -69,3 +69,4 @@ data/*.json
 data/*.csv
 data/*.db
 .env
+logs/

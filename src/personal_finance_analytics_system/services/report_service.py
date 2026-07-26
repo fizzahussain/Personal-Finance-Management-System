@@ -1,7 +1,6 @@
 import csv
 import json
-from calendar import monthrange
-from datetime import date, timedelta
+from datetime import date
 from io import StringIO
 
 from personal_finance_analytics_system.cache import (
@@ -195,38 +194,13 @@ class ReportService:
             transaction.transaction_date
         )
 
+    
     @staticmethod
     def get_latest_report_end_date(
         today: date | None = None,
     ) -> date:
         """Return the latest permitted report date"""
-        current_date = today or date.today()
-
-        if current_date.month == 1:
-            previous_year = current_date.year - 1
-            previous_month = 12
-        else:
-            previous_year = current_date.year
-            previous_month = current_date.month - 1
-
-        previous_month_days = monthrange(
-            previous_year,
-            previous_month,
-        )[1]
-
-        matching_day = min(
-            current_date.day,
-            previous_month_days,
-        )
-
-        return (
-            date(
-                previous_year,
-                previous_month,
-                matching_day,
-            )
-            - timedelta(days=1)
-        )
+        return today or date.today()
 
     def export_date_range_report_csv(
         self,

@@ -676,24 +676,7 @@ def show_reports() -> None:
         unsafe_allow_html=True,
     )
 
-    latest_end_date = date.today().replace(day=1)
-
-    if latest_end_date.month == 1:
-        latest_end_date = latest_end_date.replace(
-            year=latest_end_date.year - 1,
-            month=12,
-        )
-    else:
-        latest_end_date = latest_end_date.replace(
-            month=latest_end_date.month - 1,
-        )
-
-    latest_end_date = latest_end_date.replace(
-        day=min(
-            date.today().day - 1,
-            28,
-        )
-    )
+    latest_end_date = date.today()
 
     start_column, end_column = st.columns(2)
 
