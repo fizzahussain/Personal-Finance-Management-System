@@ -64,7 +64,7 @@ def test_version_endpoint(
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.0.0",
+        "version": "1.3.0",
     }
 
 
@@ -93,7 +93,7 @@ def test_openapi_documentation() -> None:
     assert schema["info"]["title"] == (
         "Personal Finance Analytics API"
     )
-    assert schema["info"]["version"] == "1.0.0"
+    assert schema["info"]["version"] == "1.3.0"
     assert "/api/v1/" in schema["paths"]
     assert "/api/v1/health" in schema["paths"]
 
