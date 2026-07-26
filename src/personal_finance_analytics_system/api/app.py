@@ -149,7 +149,7 @@ def run() -> None:
 
     uvicorn.run(
     "personal_finance_analytics_system.api.app:app",
-    host="127.0.0.1",
+    host="0.0.0.0",
     port=8000,
     reload=True,
     reload_dirs=[
