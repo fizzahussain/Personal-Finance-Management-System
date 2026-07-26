@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -18,7 +20,7 @@ def override_current_user() -> User:
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Iterator[TestClient]:
     """Return an authenticated API test client"""
     app.dependency_overrides[get_current_user] = (
         override_current_user
