@@ -1,4 +1,4 @@
-# Virtual environment
+# Virtual environments
 .venv/
 venv/
 env/
@@ -47,11 +47,18 @@ logs/
 *.sqlite3
 
 # Generated reports and charts
+reports/
 reports/*.png
 reports/*.jpg
 reports/*.jpeg
 reports/*.pdf
-reports/
+
+# Generated application data
+data/*.json
+data/*.csv
+data/*.db
+src/personal_finance_analytics_system/data/*.db
+tests/data/*.db
 
 # Jupyter
 .ipynb_checkpoints/
@@ -62,11 +69,3 @@ Thumbs.db
 
 # Temporary files
 tempCodeRunnerFile.py
-*.
-
-# Generated application data
-data/*.json
-data/*.csv
-data/*.db
-.env
-logs/

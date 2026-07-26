@@ -1,23 +1,50 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from personal_finance_analytics_system.api.app import app
+from personal_finance_analytics_system.api.dependencies import (
+    get_current_user,
+)
+from personal_finance_analytics_system.user import User
 
-client = TestClient(app)
+
+def override_current_user() -> User:
+    """Return an authenticated test user"""
+    return User(
+        user_id=1,
+        email="test@example.com",
+        password_hash="test-password-hash",
+    )
 
 
-def test_root_endpoint() -> None:
+@pytest.fixture
+def client() -> TestClient:
+    """Return an authenticated API test client"""
+    app.dependency_overrides[get_current_user] = (
+        override_current_user
+    )
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+
+
+def test_root_endpoint(
+    client: TestClient,
+) -> None:
     """Return basic API information"""
     response = client.get("/api/v1/")
 
     assert response.status_code == 200
     assert response.json() == {
-        "name": "Personal Finance Analytics API",
-        "status": "running",
-        "api_version": "v1",
+        "message": "Personal Finance Analytics API",
     }
 
 
-def test_health_endpoint() -> None:
+def test_health_endpoint(
+    client: TestClient,
+) -> None:
     """Return a healthy API status"""
     response = client.get("/api/v1/health")
 
@@ -27,9 +54,35 @@ def test_health_endpoint() -> None:
     }
 
 
+def test_version_endpoint(
+    client: TestClient,
+) -> None:
+    """Return API version information"""
+    response = client.get("/api/v1/version")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "version": "1.0.0",
+    }
+
+
+def test_config_endpoint(
+    client: TestClient,
+) -> None:
+    """Return safe application configuration"""
+    response = client.get("/api/v1/config")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "api_prefix": "/api/v1",
+        "environment": "development",
+    }
+
+
 def test_openapi_documentation() -> None:
     """Expose the OpenAPI schema"""
-    response = client.get("/openapi.json")
+    with TestClient(app) as test_client:
+        response = test_client.get("/openapi.json")
 
     assert response.status_code == 200
 
@@ -43,28 +96,22 @@ def test_openapi_documentation() -> None:
     assert "/api/v1/health" in schema["paths"]
 
 
-def test_version_endpoint() -> None:
-    """Return API version information"""
-    response = client.get("/api/v1/version")
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/",
+        "/api/v1/health",
+        "/api/v1/version",
+        "/api/v1/config",
+    ],
+)
+def test_system_endpoints_require_authentication(
+    path: str,
+) -> None:
+    """Reject unauthenticated system requests"""
+    app.dependency_overrides.clear()
 
-    assert response.status_code == 200
-    assert response.json() == {
-        "name": "Personal Finance Analytics API",
-        "version": "1.0.0",
-        "api_version": "v1",
-    }
+    with TestClient(app) as test_client:
+        response = test_client.get(path)
 
-
-def test_config_endpoint() -> None:
-    """Return safe public configuration"""
-    response = client.get("/api/v1/config")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "currency": "USD",
-        "available_report_formats": [
-            "csv",
-            "json",
-        ],
-        "minimum_report_date": "2020-01-01",
-    }
+    assert response.status_code == 401

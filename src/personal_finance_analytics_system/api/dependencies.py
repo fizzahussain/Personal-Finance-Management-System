@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -13,6 +12,9 @@ from personal_finance_analytics_system.auth import (
 )
 from personal_finance_analytics_system.budget_manager import (
     BudgetManager,
+)
+from personal_finance_analytics_system.config import (
+    DATABASE_PATH,
 )
 from personal_finance_analytics_system.report_manager import (
     ReportManager,
@@ -36,8 +38,6 @@ from personal_finance_analytics_system.user import User
 from personal_finance_analytics_system.user_storage import (
     UserStorage,
 )
-
-DATABASE_PATH = Path("data/transactions.db")
 
 bearer_scheme = HTTPBearer(
     auto_error=False,
@@ -73,7 +73,10 @@ def get_current_user(
             },
         ) from error
 
-    storage = UserStorage(str(DATABASE_PATH))
+    storage = UserStorage(
+        str(DATABASE_PATH)
+    )
+
     user = storage.get_user(user_id)
 
     if user is None:
