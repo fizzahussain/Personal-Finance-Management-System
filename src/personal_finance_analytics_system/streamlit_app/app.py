@@ -141,6 +141,7 @@ def logout() -> None:
 def show_authentication() -> None:
     """Display login and registration forms"""
     st.title("FinanceFlow")
+
     st.markdown(
         '<p class="page-subtitle">'
         "Sign in to manage your personal finances"
@@ -175,9 +176,19 @@ def show_authentication() -> None:
             )
 
         if submitted:
+            cleaned_email = email.strip()
+
+            if not cleaned_email:
+                st.error("Email is required")
+                return
+
+            if not password:
+                st.error("Password is required")
+                return
+
             try:
                 login(
-                    email.strip(),
+                    cleaned_email,
                     password,
                 )
             except ApiClientError as error:
@@ -201,6 +212,7 @@ def show_authentication() -> None:
             confirmed_password = st.text_input(
                 "Confirm password",
                 type="password",
+                key="register_confirmed_password",
             )
 
             submitted = st.form_submit_button(
@@ -210,18 +222,40 @@ def show_authentication() -> None:
             )
 
         if submitted:
+            cleaned_email = email.strip()
+
+            if not cleaned_email:
+                st.error("Email is required")
+                return
+
+            if not password:
+                st.error("Password is required")
+                return
+
+            if len(password) < 8:
+                st.error(
+                    "Password must be at least 8 characters"
+                )
+                return
+
+            if not confirmed_password:
+                st.error(
+                    "Please confirm your password"
+                )
+                return
+
             if password != confirmed_password:
                 st.error("Passwords do not match")
                 return
 
             try:
                 register_user(
-                    email.strip(),
+                    cleaned_email,
                     password,
                 )
 
                 login(
-                    email.strip(),
+                    cleaned_email,
                     password,
                 )
             except ApiClientError as error:
@@ -233,6 +267,7 @@ def show_authentication() -> None:
 def show_dashboard() -> None:
     """Display the financial dashboard"""
     st.title("Dashboard")
+
     st.markdown(
         '<p class="page-subtitle">'
         "A clear view of your financial position"
@@ -266,9 +301,12 @@ def show_dashboard() -> None:
         else 0.0
     )
 
-    income_column, expense_column, balance_column, rate_column = (
-        st.columns(4)
-    )
+    (
+        income_column,
+        expense_column,
+        balance_column,
+        rate_column,
+    ) = st.columns(4)
 
     income_column.metric(
         "Total income",
@@ -327,9 +365,11 @@ def show_dashboard() -> None:
                     "transaction_date": "Date",
                     "transaction_type": "Type",
                     "category": "Category",
-                    "amount": st.column_config.NumberColumn(
-                        "Amount",
-                        format="$%.2f",
+                    "amount": (
+                        st.column_config.NumberColumn(
+                            "Amount",
+                            format="$%.2f",
+                        )
                     ),
                 },
             )
@@ -369,6 +409,7 @@ def show_dashboard() -> None:
 def show_add_transaction() -> None:
     """Display the transaction form"""
     st.title("Add transaction")
+
     st.markdown(
         '<p class="page-subtitle">'
         "Record income and expenses"
@@ -467,6 +508,7 @@ def show_add_transaction() -> None:
 def show_transactions() -> None:
     """Display transaction history"""
     st.title("Transactions")
+
     st.markdown(
         '<p class="page-subtitle">'
         "Search and review your transaction history"
@@ -553,6 +595,7 @@ def show_transactions() -> None:
 def show_budgets() -> None:
     """Display budget management"""
     st.title("Budgets")
+
     st.markdown(
         '<p class="page-subtitle">'
         "Set spending targets and monitor progress"
@@ -638,13 +681,16 @@ def show_budgets() -> None:
                 f"### {category_name}"
             )
 
-            metric_column, status_metric_column = (
-                st.columns(2)
-            )
+            (
+                metric_column,
+                status_metric_column,
+            ) = st.columns(2)
 
             metric_column.metric(
                 "Budget",
-                format_currency(float(item["budget"])),
+                format_currency(
+                    float(item["budget"])
+                ),
             )
 
             status_metric_column.metric(
@@ -669,6 +715,7 @@ def show_budgets() -> None:
 def show_reports() -> None:
     """Display date-range financial analytics"""
     st.title("Financial reports")
+
     st.markdown(
         '<p class="page-subtitle">'
         "Review and download historical financial data"
@@ -708,9 +755,12 @@ def show_reports() -> None:
         show_error(error)
         return
 
-    income_column, expense_column, balance_column, rate_column = (
-        st.columns(4)
-    )
+    (
+        income_column,
+        expense_column,
+        balance_column,
+        rate_column,
+    ) = st.columns(4)
 
     income_column.metric(
         "Income",
