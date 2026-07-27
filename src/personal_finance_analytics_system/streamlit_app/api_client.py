@@ -10,6 +10,49 @@ class ApiClientError(Exception):
     """Represent an API communication error"""
 
 
+def extract_error_message(
+    response: httpx.Response,
+    default_message: str = "The API request failed",
+) -> str:
+    """Return a readable API error message"""
+    try:
+        payload = response.json()
+    except ValueError:
+        return default_message
+
+    detail = payload.get("detail", default_message)
+
+    if isinstance(detail, str):
+        return detail
+
+    if isinstance(detail, list):
+        messages: list[str] = []
+
+        for error in detail:
+            if not isinstance(error, dict):
+                continue
+
+            location = error.get("loc", [])
+            field = location[-1] if location else "field"
+            message = error.get("msg", "Invalid value")
+
+            readable_field = (
+                str(field)
+                .replace("_", " ")
+                .strip()
+                .capitalize()
+            )
+
+            messages.append(
+                f"{readable_field}: {message}"
+            )
+
+        if messages:
+            return "\n".join(messages)
+
+    return default_message
+
+
 def get_authorization_headers(
     access_token: str | None,
 ) -> dict[str, str]:
@@ -50,21 +93,19 @@ def request(
         ) from error
 
     if response.status_code >= 400:
-        try:
-            response_data = response.json()
-            detail = response_data.get(
-                "detail",
-                "The API request failed",
-            )
-        except ValueError:
-            detail = "The API request failed"
-
-        raise ApiClientError(str(detail))
+        raise ApiClientError(
+            extract_error_message(response)
+        )
 
     if response.status_code == 204:
         return None
 
-    return response.json()
+    try:
+        return response.json()
+    except ValueError as error:
+        raise ApiClientError(
+            "The API returned an invalid response"
+        ) from error
 
 
 def register_user(
@@ -238,14 +279,13 @@ def download_report(
         ) from error
 
     if response.status_code >= 400:
-        try:
-            detail = response.json().get(
-                "detail",
-                "The report download failed",
+        raise ApiClientError(
+            extract_error_message(
+                response,
+                default_message=(
+                    "The report download failed"
+                ),
             )
-        except ValueError:
-            detail = "The report download failed"
-
-        raise ApiClientError(str(detail))
+        )
 
     return response.content
