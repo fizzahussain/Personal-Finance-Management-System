@@ -918,48 +918,51 @@ def show_add_transaction() -> None:
     )
 
     with form_column:
-        with st.form("transaction_form"):
-            transaction_type = (
-                st.segmented_control(
-                    "Transaction type",
-                    [
-                        "income",
-                        "expense",
-                    ],
-                    default="expense",
-                )
-            )
+        transaction_type = st.segmented_control(
+            "Transaction type",
+            [
+                "income",
+                "expense",
+            ],
+            default="expense",
+            key="transaction_type_selector",
+        )
 
+        income_categories = [
+            "Salary",
+            "Freelance",
+            "Investment",
+            "Bonus",
+            "Refund",
+            "Rental income",
+            "Other",
+        ]
+
+        expense_categories = [
+            "Food",
+            "Transport",
+            "Housing",
+            "Utilities",
+            "Entertainment",
+            "Shopping",
+            "Health",
+            "Education",
+            "Subscriptions",
+            "Other",
+        ]
+
+        category_options = (
+            income_categories
+            if transaction_type == "income"
+            else expense_categories
+        )
+
+        with st.form("transaction_form"):
             amount = st.number_input(
                 "Amount",
                 min_value=0.01,
                 step=1.0,
                 format="%.2f",
-            )
-
-            income_categories = [
-                "Salary",
-                "Freelance",
-                "Investment",
-                "Refund",
-                "Other",
-            ]
-
-            expense_categories = [
-                "Food",
-                "Transport",
-                "Housing",
-                "Utilities",
-                "Entertainment",
-                "Shopping",
-                "Health",
-                "Other",
-            ]
-
-            category_options = (
-                income_categories
-                if transaction_type == "income"
-                else expense_categories
             )
 
             selected_category = st.selectbox(
@@ -1016,7 +1019,8 @@ def show_add_transaction() -> None:
                 **Income**
 
                 Use income for salary, freelance work,
-                investments, refunds, and other money received.
+                investments, bonuses, refunds, rental income,
+                and other money received.
 
                 **Expense**
 
@@ -1025,8 +1029,8 @@ def show_add_transaction() -> None:
 
                 **Categories**
 
-                Consistent categories create better reports
-                and more accurate budget comparisons.
+                Select a predefined category or choose Other
+                to enter your own category.
                 """
             )
 
@@ -1079,11 +1083,11 @@ def show_add_transaction() -> None:
     st.session_state.transaction_success = (
         f"{transaction_type.title()} transaction "
         f"of {format_currency(float(amount))} "
+        f"for {category.title()} "
         "was added successfully."
     )
 
     st.rerun()
-
 
 def show_transactions() -> None:
     """Display transaction history"""
