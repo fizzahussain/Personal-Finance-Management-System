@@ -21,6 +21,13 @@ A full-stack personal finance application with authenticated multi-user data, tr
 
 ---
 
+
+## 🎥 Demo
+
+[▶ Watch the RAG Document Assistant demo](https://github.com/user-attachments/assets/497aed76-c431-474d-a104-09fbb8e69741)
+
+
+
 ## ✨ What the System Does
 
 The project started as a finance tracker and grew into a layered application with three ways to use the same core functionality:
