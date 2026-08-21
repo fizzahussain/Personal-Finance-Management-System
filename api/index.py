@@ -1,0 +1,11 @@
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SRC = PROJECT_ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from personal_finance_analytics_system.api.app import app
+
+# Vercel's Python runtime discovers this ASGI application.
