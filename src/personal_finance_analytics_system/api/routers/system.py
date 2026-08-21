@@ -1,13 +1,10 @@
 import os
 
-from fastapi import APIRouter, Depends
-
-from personal_finance_analytics_system.api.dependencies import get_current_user
+from fastapi import APIRouter
 
 router = APIRouter(
     prefix="",
     tags=["system"],
-    dependencies=[Depends(get_current_user)],
 )
 
 
