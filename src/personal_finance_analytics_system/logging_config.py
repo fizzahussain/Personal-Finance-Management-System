@@ -35,9 +35,7 @@ def get_log_level() -> str:
     configured_level = os.getenv("LOG_LEVEL")
 
     if configured_level:
-        normalized_level = (
-            configured_level.strip().upper()
-        )
+        normalized_level = configured_level.strip().upper()
 
         if normalized_level in VALID_LOG_LEVELS:
             return normalized_level
@@ -51,15 +49,66 @@ def get_log_level() -> str:
 
 
 def configure_logging() -> None:
-    """Configure console and rotating file logs"""
-    log_directory = Path("logs")
+    """Configure logging for local runs and read-only serverless runtimes.
 
-    log_directory.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
+    Vercel serverless functions have a read-only application filesystem, so
+    file-based rotating logs are intentionally disabled there. Vercel captures
+    stdout/stderr and exposes those logs through its runtime logging system.
+    """
     log_level = get_log_level()
+    on_vercel = bool(os.getenv("VERCEL"))
+
+    handlers = {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": log_level,
+            "formatter": "standard",
+        },
+    }
+
+    logger_handlers = ["console"]
+    loggers = {}
+
+    if not on_vercel:
+        log_directory = Path("logs")
+        log_directory.mkdir(parents=True, exist_ok=True)
+
+        handlers.update(
+            {
+                "application_file": {
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "level": log_level,
+                    "formatter": "standard",
+                    "filename": "logs/personal-finance.log",
+                    "maxBytes": 1_000_000,
+                    "backupCount": 3,
+                    "encoding": "utf-8",
+                },
+                "error_file": {
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "level": "ERROR",
+                    "formatter": "standard",
+                    "filename": "logs/personal-finance-error.log",
+                    "maxBytes": 1_000_000,
+                    "backupCount": 3,
+                    "encoding": "utf-8",
+                },
+            }
+        )
+        logger_handlers = ["console", "application_file", "error_file"]
+
+    for logger_name in ("uvicorn", "uvicorn.error"):
+        loggers[logger_name] = {
+            "level": log_level,
+            "handlers": logger_handlers,
+            "propagate": False,
+        }
+
+    loggers["uvicorn.access"] = {
+        "level": "INFO",
+        "handlers": ["console"] if on_vercel else ["console", "application_file"],
+        "propagate": False,
+    }
 
     dictConfig(
         {
@@ -76,91 +125,25 @@ def configure_logging() -> None:
                     "datefmt": "%Y-%m-%d %H:%M:%S",
                 },
             },
-            "handlers": {
-                "console": {
-                    "class": "logging.StreamHandler",
-                    "level": log_level,
-                    "formatter": "standard",
-                },
-                "application_file": {
-                    "class": (
-                        "logging.handlers."
-                        "RotatingFileHandler"
-                    ),
-                    "level": log_level,
-                    "formatter": "standard",
-                    "filename": (
-                        "logs/personal-finance.log"
-                    ),
-                    "maxBytes": 1_000_000,
-                    "backupCount": 3,
-                    "encoding": "utf-8",
-                },
-                "error_file": {
-                    "class": (
-                        "logging.handlers."
-                        "RotatingFileHandler"
-                    ),
-                    "level": "ERROR",
-                    "formatter": "standard",
-                    "filename": (
-                        "logs/personal-finance-error.log"
-                    ),
-                    "maxBytes": 1_000_000,
-                    "backupCount": 3,
-                    "encoding": "utf-8",
-                },
-            },
+            "handlers": handlers,
             "root": {
                 "level": log_level,
-                "handlers": [
-                    "console",
-                    "application_file",
-                    "error_file",
-                ],
+                "handlers": logger_handlers,
             },
-            "loggers": {
-                "uvicorn": {
-                    "level": log_level,
-                    "handlers": [
-                        "console",
-                        "application_file",
-                        "error_file",
-                    ],
-                    "propagate": False,
-                },
-                "uvicorn.error": {
-                    "level": log_level,
-                    "handlers": [
-                        "console",
-                        "application_file",
-                        "error_file",
-                    ],
-                    "propagate": False,
-                },
-                "uvicorn.access": {
-                    "level": "INFO",
-                    "handlers": [
-                        "console",
-                        "application_file",
-                    ],
-                    "propagate": False,
-                },
-            },
+            "loggers": loggers,
         }
     )
 
     logger = logging.getLogger(__name__)
 
     logger.info(
-        "Logging configured environment=%s level=%s",
+        "Logging configured environment=%s level=%s serverless=%s",
         get_environment(),
         log_level,
+        on_vercel,
     )
 
-    logger.debug(
-        "Debug logging is enabled"
-    )
+    logger.debug("Debug logging is enabled")
 
 
 def get_logger(
