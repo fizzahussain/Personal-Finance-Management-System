@@ -119,6 +119,33 @@ def test_rejects_invalid_amount(
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize(
+    "amount",
+    [
+        "NaN",
+        "Infinity",
+        "-Infinity",
+    ],
+)
+def test_rejects_non_finite_amount(
+    client: TestClient,
+    amount: str,
+) -> None:
+    """Reject non-finite transaction amounts as client errors"""
+    response = client.post(
+        "/api/v1/transactions",
+        content=(
+            '{"amount":'
+            + amount
+            + ',"transaction_type":"expense","category":"Food",'
+            + '"description":"","transaction_date":"2026-07-23"}'
+        ),
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 422
+
+
 def test_rejects_invalid_transaction_type(
     client: TestClient,
 ) -> None:

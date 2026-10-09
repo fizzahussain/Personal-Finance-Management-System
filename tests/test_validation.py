@@ -20,6 +20,53 @@ def test_reject_zero_transaction_amount() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "amount",
+    [
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+    ],
+)
+def test_reject_non_finite_transaction_amount(
+    amount: float,
+) -> None:
+    """Reject non-finite transaction amounts"""
+    with pytest.raises(
+        InvalidTransactionError,
+        match="finite",
+    ):
+        Transaction(
+            amount,
+            "expense",
+            "Food",
+        )
+
+
+def test_accept_positive_transaction_amount() -> None:
+    """Accept a positive transaction amount"""
+    transaction = Transaction(
+        100,
+        "expense",
+        "Food",
+    )
+
+    assert transaction.amount == 100
+
+
+def test_reject_negative_transaction_amount() -> None:
+    """Reject a negative transaction amount"""
+    with pytest.raises(
+        InvalidTransactionError,
+        match="greater than zero",
+    ):
+        Transaction(
+            -100,
+            "expense",
+            "Food",
+        )
+
+
 def test_reject_invalid_transaction_type() -> None:
     """Reject an invalid transaction type"""
     with pytest.raises(InvalidTransactionError):
@@ -60,6 +107,39 @@ def test_reject_invalid_budget_amount() -> None:
             "Food",
             -100,
         )
+
+
+@pytest.mark.parametrize(
+    "amount",
+    [
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+    ],
+)
+def test_reject_non_finite_budget_amount(
+    amount: float,
+) -> None:
+    """Reject non-finite budget amounts"""
+    budget_manager = BudgetManager()
+
+    with pytest.raises(
+        InvalidBudgetError,
+        match="finite",
+    ):
+        budget_manager.set_budget(
+            "Food",
+            amount,
+        )
+
+
+def test_accept_positive_budget_amount() -> None:
+    """Accept a positive budget amount"""
+    budget_manager = BudgetManager()
+
+    budget_manager.set_budget("Food", 100)
+
+    assert budget_manager.get_budget("Food") == 100
 
 
 def test_reject_empty_budget_category() -> None:

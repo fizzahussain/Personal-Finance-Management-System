@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 
+from personal_finance_analytics_system.budget_manager import (
+    BudgetManager,
+)
 from personal_finance_analytics_system.exceptions import (
+    InvalidBudgetError,
     StorageError,
 )
 from personal_finance_analytics_system.sqlite_budget_storage import (
@@ -32,6 +36,27 @@ def test_save_and_load_budgets(
         "food": 500.0,
         "transport": 300.0,
     }
+
+
+def test_rejects_non_finite_stored_budget(
+    tmp_path: Path,
+) -> None:
+    """Reject a non-finite budget when loading it into the manager"""
+    file_path = tmp_path / "finance.db"
+    storage = SqliteBudgetStorage(str(file_path))
+    storage.save_budgets(
+        {
+            "food": float("inf"),
+        }
+    )
+
+    manager = BudgetManager()
+
+    with pytest.raises(
+        InvalidBudgetError,
+        match="Stored budget data is invalid",
+    ):
+        manager.load_budgets(storage.load_budgets())
 
 
 def test_save_replaces_current_user_budgets(

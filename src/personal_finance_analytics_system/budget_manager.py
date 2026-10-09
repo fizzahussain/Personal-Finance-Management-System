@@ -1,3 +1,5 @@
+import math
+
 from personal_finance_analytics_system.exceptions import (
     InvalidBudgetError,
 )
@@ -34,6 +36,11 @@ class BudgetManager:
             raise InvalidBudgetError(
                 "Budget must be a valid number"
             ) from error
+
+        if not math.isfinite(valid_amount):
+            raise InvalidBudgetError(
+                "Budget must be a finite number"
+            )
 
         if valid_amount <= 0:
             raise InvalidBudgetError(
@@ -152,7 +159,11 @@ class BudgetManager:
                     "Stored budget must be a valid number"
                 ) from error
 
-            if not category_key or valid_amount <= 0:
+            if (
+                not category_key
+                or not math.isfinite(valid_amount)
+                or valid_amount <= 0
+            ):
                 raise InvalidBudgetError(
                     "Stored budget data is invalid"
                 )

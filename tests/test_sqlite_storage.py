@@ -2,6 +2,11 @@ import sqlite3
 from contextlib import closing
 from pathlib import Path
 
+import pytest
+
+from personal_finance_analytics_system.exceptions import (
+    StorageError,
+)
 from personal_finance_analytics_system.sqlite_storage import (
     SqliteStorage,
 )
@@ -55,6 +60,37 @@ def test_save_and_load_transactions(
         loaded_transactions[1].transaction_date
         == "2026-07-02"
     )
+
+
+def test_rejects_non_finite_stored_transaction(
+    tmp_path: Path,
+) -> None:
+    """Reject a non-finite amount loaded from SQLite"""
+    file_path = tmp_path / "transactions.db"
+    storage = SqliteStorage(str(file_path))
+
+    with closing(sqlite3.connect(file_path)) as connection:
+        connection.execute(
+            """
+            INSERT INTO transactions (
+                user_id,
+                amount,
+                transaction_type,
+                category,
+                description,
+                transaction_date
+            )
+            VALUES (1, ?, 'income', 'Salary', '', '2026-07-01')
+            """,
+            (float("inf"),),
+        )
+        connection.commit()
+
+    with pytest.raises(
+        StorageError,
+        match="transaction data is invalid",
+    ):
+        storage.load_transactions()
 
 
 def test_save_replaces_existing_transactions(

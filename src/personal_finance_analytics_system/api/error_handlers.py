@@ -1,4 +1,8 @@
+import math
+
 from fastapi import FastAPI, Request, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from personal_finance_analytics_system.exceptions import (
@@ -9,6 +13,27 @@ from personal_finance_analytics_system.exceptions import (
 
 def register_error_handlers(app: FastAPI) -> None:
     """Register application exception handlers"""
+
+    @app.exception_handler(RequestValidationError)
+    async def handle_request_validation_error(
+        request: Request,
+        error: RequestValidationError,
+    ) -> JSONResponse:
+        """Return request validation errors as JSON-safe client errors"""
+        errors = error.errors()
+
+        for item in errors:
+            value = item.get("input")
+
+            if isinstance(value, float) and not math.isfinite(value):
+                item["input"] = repr(value)
+
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={
+                "detail": jsonable_encoder(errors),
+            },
+        )
 
     @app.exception_handler(StorageError)
     async def handle_storage_error(
