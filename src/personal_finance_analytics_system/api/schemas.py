@@ -69,7 +69,7 @@ class TokenResponse(BaseModel):
 class TransactionCreate(BaseModel):
     """Validate transaction input"""
 
-    amount: float = Field(gt=0)
+    amount: float = Field(gt=0, allow_inf_nan=False)
     transaction_type: Literal["income", "expense"]
     category: str = Field(min_length=1)
     description: str = ""
@@ -122,7 +122,7 @@ class TransactionSummaryResponse(BaseModel):
 class CategoryBudgetUpdate(BaseModel):
     """Validate a category budget"""
 
-    amount: float = Field(gt=0)
+    amount: float = Field(gt=0, allow_inf_nan=False)
 
 
 class CategoryBudgetResponse(BaseModel):

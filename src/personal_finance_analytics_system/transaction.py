@@ -1,3 +1,4 @@
+import math
 from datetime import date, datetime
 
 from personal_finance_analytics_system.exceptions import (
@@ -61,6 +62,11 @@ class Transaction:
             raise InvalidTransactionError(
                 "Amount must be a valid number"
             ) from error
+
+        if not math.isfinite(valid_amount):
+            raise InvalidTransactionError(
+                "Amount must be a finite number"
+            )
 
         if valid_amount <= 0:
             raise InvalidTransactionError(

@@ -155,6 +155,29 @@ def test_rejects_non_positive_budget(
 
     assert response.status_code == 422
 
+
+@pytest.mark.parametrize(
+    "amount",
+    [
+        "NaN",
+        "Infinity",
+        "-Infinity",
+    ],
+)
+def test_rejects_non_finite_budget(
+    client: TestClient,
+    amount: str,
+) -> None:
+    """Reject non-finite budgets as client errors"""
+    response = client.put(
+        "/api/v1/budgets/categories/Food",
+        content='{"amount":' + amount + '}',
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 422
+
+
 def test_get_budget_statuses(
     client: TestClient,
 ) -> None:
